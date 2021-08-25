@@ -27,7 +27,6 @@
 #include <SoapySDR/Device.hpp>
 #include <SoapySDR/Logger.h>
 #include <SoapySDR/Types.h>
-#include <rtl-sdr.h>
 #include <stdexcept>
 #include <thread>
 #include <mutex>
@@ -220,9 +219,9 @@ public:
      * Utility
      ******************************************************************/
 
-    static std::string rtlTunerToString(rtlsdr_tuner tunerType);
-    static rtlsdr_tuner rtlStringToTuner(std::string tunerType);
-    static int getE4000Gain(int stage, int gain);
+    //static std::string rtlTunerToString(rtlsdr_tuner tunerType);
+    //static rtlsdr_tuner rtlStringToTuner(std::string tunerType);
+    //static int getE4000Gain(int stage, int gain);
 
 
     /*******************************************************************
@@ -239,11 +238,11 @@ private:
 
     //device handle
     int deviceId;
-    rtlsdr_dev_t *dev;
+    //rtlsdr_dev_t *dev;
 
     //cached settings
     rtlsdrRXFormat rxFormat;
-    rtlsdr_tuner tunerType;
+    //int tunerType;
     uint32_t sampleRate, centerFrequency, bandwidth;
     int ppm, directSamplingMode;
     size_t numBuffers, bufferLength, asyncBuffs;

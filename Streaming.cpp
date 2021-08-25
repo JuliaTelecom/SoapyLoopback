@@ -44,9 +44,9 @@ std::vector<std::string> SoapyRTLSDR::getStreamFormats(const int direction, cons
 
 std::string SoapyRTLSDR::getNativeStreamFormat(const int direction, const size_t channel, double &fullScale) const {
     //check that direction is SOAPY_SDR_RX
-     if (direction != SOAPY_SDR_RX) {
-         throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
-     }
+    // if (direction != SOAPY_SDR_RX) {
+    //     throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
+    // }
 
      fullScale = 128;
      return SOAPY_SDR_CS8;
@@ -54,9 +54,9 @@ std::string SoapyRTLSDR::getNativeStreamFormat(const int direction, const size_t
 
 SoapySDR::ArgInfoList SoapyRTLSDR::getStreamArgsInfo(const int direction, const size_t channel) const {
     //check that direction is SOAPY_SDR_RX
-     if (direction != SOAPY_SDR_RX) {
-         throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
-     }
+    // if (direction != SOAPY_SDR_RX) {
+    //     throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
+    // }
 
     SoapySDR::ArgInfoList streamArgs;
 
@@ -107,43 +107,43 @@ static void _rx_callback(unsigned char *buf, uint32_t len, void *ctx)
 void SoapyRTLSDR::rx_async_operation(void)
 {
     //printf("rx_async_operation\n");
-    rtlsdr_read_async(dev, &_rx_callback, this, asyncBuffs, bufferLength);
+    //rtlsdr_read_async(dev, &_rx_callback, this, asyncBuffs, bufferLength);
     //printf("rx_async_operation done!\n");
 }
 
 void SoapyRTLSDR::rx_callback(unsigned char *buf, uint32_t len)
 {
-    //printf("_rx_callback %d _buf_head=%d, numBuffers=%d\n", len, _buf_head, _buf_tail);
-
-    // atomically add len to ticks but return the previous value
-    unsigned long long tick = ticks.fetch_add(len);
-
-    //overflow condition: the caller is not reading fast enough
-    if (_buf_count == numBuffers)
-    {
-        _overflowEvent = true;
-        return;
-    }
-
-    //copy into the buffer queue
-    auto &buff = _buffs[_buf_tail];
-    buff.tick = tick;
-    buff.data.resize(len);
-    std::memcpy(buff.data.data(), buf, len);
-
-    //increment the tail pointer
-    _buf_tail = (_buf_tail + 1) % numBuffers;
-
-    //increment buffers available under lock
-    //to avoid race in acquireReadBuffer wait
-    {
-    std::lock_guard<std::mutex> lock(_buf_mutex);
-    _buf_count++;
-
-    }
-
-    //notify readStream()
-    _buf_cond.notify_one();
+    ////printf("_rx_callback %d _buf_head=%d, numBuffers=%d\n", len, _buf_head, _buf_tail);
+//
+    //// atomically add len to ticks but return the previous value
+    //unsigned long long tick = ticks.fetch_add(len);
+//
+    ////overflow condition: the caller is not reading fast enough
+    //if (_buf_count == numBuffers)
+    //{
+    //    _overflowEvent = true;
+    //    return;
+    //}
+//
+    ////copy into the buffer queue
+    //auto &buff = _buffs[_buf_tail];
+    //buff.tick = tick;
+    //buff.data.resize(len);
+    //std::memcpy(buff.data.data(), buf, len);
+//
+    ////increment the tail pointer
+    //_buf_tail = (_buf_tail + 1) % numBuffers;
+//
+    ////increment buffers available under lock
+    ////to avoid race in acquireReadBuffer wait
+    //{
+    //std::lock_guard<std::mutex> lock(_buf_mutex);
+    //_buf_count++;
+//
+    //}
+//
+    ////notify readStream()
+    //_buf_cond.notify_one();
 }
 
 /*******************************************************************
@@ -268,19 +268,19 @@ SoapySDR::Stream *SoapyRTLSDR::setupStream(
         }
         catch (const std::invalid_argument &){}
     }
-    if (tunerType == RTLSDR_TUNER_E4000) {
-        IFGain[0] = 6;
-        IFGain[1] = 9;
-        IFGain[2] = 3;
-        IFGain[3] = 2;
-        IFGain[4] = 3;
-        IFGain[5] = 3;
-    } else {
-        for (int i = 0; i < 6; i++) {
-            IFGain[i] = 0;
-        }
-    }
-    tunerGain = rtlsdr_get_tuner_gain(dev) / 10.0;
+    //if (tunerType == RTLSDR_TUNER_E4000) {
+    //    IFGain[0] = 6;
+    //    IFGain[1] = 9;
+    //    IFGain[2] = 3;
+    //    IFGain[3] = 2;
+    //    IFGain[4] = 3;
+    //    IFGain[5] = 3;
+    //} else {
+    //    for (int i = 0; i < 6; i++) {
+    //        IFGain[i] = 0;
+    //    }
+    //}
+    //tunerGain = rtlsdr_get_tuner_gain(dev) / 10.0;
 
     //clear async fifo counts
     _buf_tail = 0;
@@ -312,28 +312,28 @@ int SoapyRTLSDR::activateStream(
         const long long timeNs,
         const size_t numElems)
 {
-    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
-    resetBuffer = true;
-    bufferedElems = 0;
-
-    //start the async thread
-    if (not _rx_async_thread.joinable())
-    {
-        rtlsdr_reset_buffer(dev);
-        _rx_async_thread = std::thread(&SoapyRTLSDR::rx_async_operation, this);
-    }
+    //if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
+    //resetBuffer = true;
+    //bufferedElems = 0;
+//
+    ////start the async thread
+    //if (not _rx_async_thread.joinable())
+    //{
+    //    rtlsdr_reset_buffer(dev);
+    //    _rx_async_thread = std::thread(&SoapyRTLSDR::rx_async_operation, this);
+    //}
 
     return 0;
 }
 
 int SoapyRTLSDR::deactivateStream(SoapySDR::Stream *stream, const int flags, const long long timeNs)
 {
-    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
-    if (_rx_async_thread.joinable())
-    {
-        rtlsdr_cancel_async(dev);
-        _rx_async_thread.join();
-    }
+    //if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
+    //if (_rx_async_thread.joinable())
+    //{
+    //    rtlsdr_cancel_async(dev);
+    //    _rx_async_thread.join();
+    //}
     return 0;
 }
 

@@ -24,59 +24,25 @@
 
 #include "SoapyRTLSDR.hpp"
 #include <SoapySDR/Registry.hpp>
-#include <mutex>
-#include <map>
 
-//lookup the tuner by opening the device, it's used in the discovery arguments
-//the tuner is cached because the device cannot be opened twice in the same process,
-//and we require that findRTLSDR() yield the same results for SoapySDR device cache.
-//if another process attempts to find an open rtlsdr, it will be marked unavailable
 static std::string get_tuner(const std::string &serial, const size_t deviceIndex)
 {
-    static std::mutex mutex;
-    std::lock_guard<std::mutex> lock(mutex);
-
-    static std::map<std::string, std::string> cache;
-    auto it = cache.find(serial);
-    if (it != cache.end()) return it->second;
-
-    rtlsdr_dev_t *devTest;
-    if (rtlsdr_open(&devTest, deviceIndex) != 0) return "unavailable";
-    const auto tuner = SoapyRTLSDR::rtlTunerToString(rtlsdr_get_tuner_type(devTest));
-    rtlsdr_close(devTest);
-    cache[serial] = tuner;
-    return tuner;
+    return "1";
 }
 
 static std::vector<SoapySDR::Kwargs> findRTLSDR(const SoapySDR::Kwargs &args)
 {
     std::vector<SoapySDR::Kwargs> results;
 
-    char manufact[256], product[256], serial[256];
+    SoapySDR::Kwargs devInfo;
 
-    const size_t this_count = rtlsdr_get_device_count();
+    devInfo["label"] = "loopback_label";
+    devInfo["product"] = "loopback_product";
+    devInfo["serial"] = "loopback_serial";
+    devInfo["manufacturer"] = "loopback_manufacturer";
+    devInfo["tuner"] = 1;
 
-    for (size_t i = 0; i < this_count; i++)
-    {
-        if (rtlsdr_get_device_usb_strings(i, manufact, product, serial) != 0)
-        {
-            SoapySDR_logf(SOAPY_SDR_ERROR, "rtlsdr_get_device_usb_strings(%zu) failed", i);
-            continue;
-        }
-        SoapySDR_logf(SOAPY_SDR_DEBUG, "\tManufacturer: %s, Product Name: %s, Serial: %s", manufact, product, serial);
-
-        SoapySDR::Kwargs devInfo;
-        devInfo["label"] = std::string(rtlsdr_get_device_name(i)) + " :: " + serial;
-        devInfo["product"] = product;
-        devInfo["serial"] = serial;
-        devInfo["manufacturer"] = manufact;
-        devInfo["tuner"] = get_tuner(serial, i);
-
-        //filtering by serial
-        if (args.count("serial") != 0 and args.at("serial") != serial) continue;
-
-        results.push_back(devInfo);
-    }
+    results.push_back(devInfo);
 
     return results;
 }
@@ -86,4 +52,4 @@ static SoapySDR::Device *makeRTLSDR(const SoapySDR::Kwargs &args)
     return new SoapyRTLSDR(args);
 }
 
-static SoapySDR::Registry registerRTLSDR("rtlsdr", &findRTLSDR, &makeRTLSDR, SOAPY_SDR_ABI_VERSION);
+static SoapySDR::Registry registerRTLSDR("loopback", &findRTLSDR, &makeRTLSDR, SOAPY_SDR_ABI_VERSION);
