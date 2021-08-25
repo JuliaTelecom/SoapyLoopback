@@ -1,10 +1,7 @@
-########################################################################
-# Build Soapy SDR support module for RTL-SDR Devices
-########################################################################
 cmake_minimum_required(VERSION 2.8.7)
-project(SoapyRTLSDR CXX)
+project(SoapyLoopback CXX)
 
-find_package(SoapySDR "0.4.0" NO_MODULE REQUIRED)
+find_package(SoapySDR "0.8.0" NO_MODULE REQUIRED)
 if (NOT SoapySDR_FOUND)
     message(FATAL_ERROR "Soapy SDR development files not found...")
 endif ()
@@ -12,7 +9,6 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${RTLSDR_INCLUDE_DIRS})
 
 # Test for Atomics
 include(CheckAtomic)
@@ -44,19 +40,9 @@ if (APPLE)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++11-extensions")
 endif(APPLE)
 
-# check if rtlsdr library includes support for bias-tee
-include(CheckFunctionExists)
-set(CMAKE_REQUIRED_LIBRARIES ${RTLSDR_LIBRARIES})
-check_function_exists(rtlsdr_set_bias_tee HAS_RTLSDR_SET_BIAS_TEE)
-unset(CMAKE_REQUIRED_LIBRARIES)
-if (HAS_RTLSDR_SET_BIAS_TEE)
-    add_definitions(-DHAS_RTLSDR_SET_BIAS_TEE)
-endif()
-
-set(OTHER_LIBS "" CACHE STRING "Other libraries")
 
 SOAPY_SDR_MODULE_UTIL(
-    TARGET rtlsdrSupport
+    TARGET soapyloopback
     SOURCES
         SoapyRTLSDR.hpp
         Registration.cpp
@@ -66,14 +52,3 @@ SOAPY_SDR_MODULE_UTIL(
         ${ATOMIC_LIBS}
         ${OTHER_LIBS}
 )
-
-########################################################################
-# uninstall target
-########################################################################
-add_custom_target(uninstall
-    "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
-

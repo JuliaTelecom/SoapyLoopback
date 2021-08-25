@@ -1,23 +1,25 @@
-# Soapy SDR module for RTL-SDR
+# Soapy Loopback Test Module
 
-## Build Status
+This is a simple test loopback module designed to test the SoapySDR library, particularly in
+continuous integration environments where no SDR hardware is available. It is also useful for testing
+language bindings to ensure all codepaths are exercised and produce expected results.
 
-- Travis: [![Travis Build Status](https://travis-ci.org/pothosware/SoapyRTLSDR.svg?branch=master)](https://travis-ci.org/pothosware/SoapyRTLSDR)
+Derived from the [SoapyRTLSDR](https://github.com/pothosware/SoapyRTLSDR) module.
 
 ## Dependencies
 
 * SoapySDR - https://github.com/pothosware/SoapySDR/wiki
-* librtl-sdr - http://sdr.osmocom.org/trac/wiki/rtl-sdr
 
 ## Documentation
 
-* https://github.com/pothosware/SoapyRTLSDR/wiki
+TODO
 
 ## Licensing information
 
 The MIT License (MIT)
 
 Copyright (c) 2015 Charles J. Cliffe
+Copyright (c) 2021 Julia Computing, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
