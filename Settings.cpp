@@ -92,30 +92,12 @@ SoapyRTLSDR::~SoapyRTLSDR(void)
 
 std::string SoapyRTLSDR::getDriverKey(void) const
 {
-    return "RTLSDR";
+    return "LoopbackDriver";
 }
 
 std::string SoapyRTLSDR::getHardwareKey(void) const
 {
-    //switch (rtlsdr_get_tuner_type(dev))
-    //{
-    //case RTLSDR_TUNER_UNKNOWN:
-    //    return "UNKNOWN";
-    //case RTLSDR_TUNER_E4000:
-    //    return "E4000";
-    //case RTLSDR_TUNER_FC0012:
-    //    return "FC0012";
-    //case RTLSDR_TUNER_FC0013:
-    //    return "FC0013";
-    //case RTLSDR_TUNER_FC2580:
-    //    return "FC2580";
-    //case RTLSDR_TUNER_R820T:
-    //    return "R820T";
-    //case RTLSDR_TUNER_R828D:
-    //    return "R828D";
-    //default:
-    //    return "OTHER";
-    //}
+    return "LoopbackHardware";
 }
 
 SoapySDR::Kwargs SoapyRTLSDR::getHardwareInfo(void) const
@@ -124,8 +106,8 @@ SoapySDR::Kwargs SoapyRTLSDR::getHardwareInfo(void) const
     //this also gets printed in --probe
     SoapySDR::Kwargs args;
 
-    args["origin"] = "https://github.com/pothosware/SoapyRTLSDR";
-    args["index"] = std::to_string(deviceId);
+    args["origin"] = "https://github.com/juliatelecom/SoapyLoopback";
+    args["index"] = "index";
 
     return args;
 }
@@ -136,12 +118,12 @@ SoapySDR::Kwargs SoapyRTLSDR::getHardwareInfo(void) const
 
 size_t SoapyRTLSDR::getNumChannels(const int dir) const
 {
-    return (dir == SOAPY_SDR_RX) ? 1 : 0;
+    return 2;
 }
 
 bool SoapyRTLSDR::getFullDuplex(const int direction, const size_t channel) const
 {
-    return false;
+    return true;
 }
 
 /*******************************************************************
@@ -152,6 +134,7 @@ std::vector<std::string> SoapyRTLSDR::listAntennas(const int direction, const si
 {
     std::vector<std::string> antennas;
     antennas.push_back("RX");
+    antennas.push_back("TX");
     return antennas;
 }
 
@@ -165,7 +148,7 @@ void SoapyRTLSDR::setAntenna(const int direction, const size_t channel, const st
 
 std::string SoapyRTLSDR::getAntenna(const int direction, const size_t channel) const
 {
-    return "RX";
+    return direction ? "RX" : "TX";
 }
 
 /*******************************************************************
@@ -184,16 +167,7 @@ bool SoapyRTLSDR::hasFrequencyCorrection(const int direction, const size_t chann
 
 void SoapyRTLSDR::setFrequencyCorrection(const int direction, const size_t channel, const double value)
 {
-    //int r = rtlsdr_set_freq_correction(dev, int(value));
-    //if (r == -2)
-    //{
-    //    return; // CORR didn't actually change, we are done
-    //}
-    //if (r != 0)
-    //{
-    //    throw std::runtime_error("setFrequencyCorrection failed");
-    //}
-    //ppm = rtlsdr_get_freq_correction(dev);
+    ppm = int(value);
 }
 
 double SoapyRTLSDR::getFrequencyCorrection(const int direction, const size_t channel) const
@@ -233,8 +207,6 @@ bool SoapyRTLSDR::hasGainMode(const int direction, const size_t channel) const
 void SoapyRTLSDR::setGainMode(const int direction, const size_t channel, const bool automatic)
 {
     gainMode = automatic;
-    SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting RTL-SDR gain mode: %s", automatic ? "Automatic" : "Manual");
-    //rtlsdr_set_tuner_gain_mode(dev, gainMode ? 0 : 1);
 }
 
 bool SoapyRTLSDR::getGainMode(const int direction, const size_t channel) const
@@ -322,7 +294,7 @@ SoapySDR::Range SoapyRTLSDR::getGainRange(const int direction, const size_t chan
     //        return SoapySDR::Range(0, 2);
     //    }
     //    if (name == "IF5" || name == "IF6") {
-    //        return SoapySDR::Range(3, 15);
+           return SoapySDR::Range(3, 15);
     //    }
 //
     //    return SoapySDR::Range(gainMin, gainMax);
@@ -396,24 +368,16 @@ SoapySDR::RangeList SoapyRTLSDR::getFrequencyRange(
         const size_t channel,
         const std::string &name) const
 {
-    //SoapySDR::RangeList results;
-    //if (name == "RF")
-    //{
-    //    if (tunerType == RTLSDR_TUNER_E4000) {
-    //        results.push_back(SoapySDR::Range(52000000, 2200000000));
-    //    } else if (tunerType == RTLSDR_TUNER_FC0012) {
-    //        results.push_back(SoapySDR::Range(22000000, 1100000000));
-    //    } else if (tunerType == RTLSDR_TUNER_FC0013) {
-    //        results.push_back(SoapySDR::Range(22000000, 948600000));
-    //    } else {
-    //        results.push_back(SoapySDR::Range(24000000, 1764000000));
-    //    }
-    //}
-    //if (name == "CORR")
-    //{
-    //    results.push_back(SoapySDR::Range(-1000, 1000));
-    //}
-    //return results;
+    SoapySDR::RangeList results;
+    if (name == "RF")
+    {
+        results.push_back(SoapySDR::Range(24000000, 1764000000));
+    }
+    if (name == "CORR")
+    {
+        results.push_back(SoapySDR::Range(-1000, 1000));
+    }
+    return results;
 }
 
 SoapySDR::ArgInfoList SoapyRTLSDR::getFrequencyArgsInfo(const int direction, const size_t channel) const
@@ -483,12 +447,7 @@ SoapySDR::RangeList SoapyRTLSDR::getSampleRateRange(const int direction, const s
 
 void SoapyRTLSDR::setBandwidth(const int direction, const size_t channel, const double bw)
 {
-    //int r = rtlsdr_set_tuner_bandwidth(dev, bw);
-    //if (r != 0)
-    //{
-    //    throw std::runtime_error("setBandwidth failed");
-    //}
-    //bandwidth = bw;
+    bandwidth = bw;
 }
 
 double SoapyRTLSDR::getBandwidth(const int direction, const size_t channel) const

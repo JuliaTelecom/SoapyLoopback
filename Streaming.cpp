@@ -43,21 +43,11 @@ std::vector<std::string> SoapyRTLSDR::getStreamFormats(const int direction, cons
 }
 
 std::string SoapyRTLSDR::getNativeStreamFormat(const int direction, const size_t channel, double &fullScale) const {
-    //check that direction is SOAPY_SDR_RX
-    // if (direction != SOAPY_SDR_RX) {
-    //     throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
-    // }
 
-     fullScale = 128;
      return SOAPY_SDR_CS8;
 }
 
 SoapySDR::ArgInfoList SoapyRTLSDR::getStreamArgsInfo(const int direction, const size_t channel) const {
-    //check that direction is SOAPY_SDR_RX
-    // if (direction != SOAPY_SDR_RX) {
-    //     throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
-    // }
-
     SoapySDR::ArgInfoList streamArgs;
 
     SoapySDR::ArgInfo bufflenArg;
@@ -156,10 +146,6 @@ SoapySDR::Stream *SoapyRTLSDR::setupStream(
         const std::vector<size_t> &channels,
         const SoapySDR::Kwargs &args)
 {
-    if (direction != SOAPY_SDR_RX)
-    {
-        throw std::runtime_error("RTL-SDR is RX only, use SOAPY_SDR_RX");
-    }
 
     //check the channel configuration
     if (channels.size() > 1 or (channels.size() > 0 and channels.at(0) != 0))
