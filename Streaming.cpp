@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  */
 
-#include "SoapyRTLSDR.hpp"
+#include "SoapyLoopback.hpp"
 #include <SoapySDR/Logger.hpp>
 #include <SoapySDR/Formats.hpp>
 #include <SoapySDR/Time.hpp>
@@ -32,7 +32,7 @@
 #include <cstring> // memcpy
 
 
-std::vector<std::string> SoapyRTLSDR::getStreamFormats(const int direction, const size_t channel) const {
+std::vector<std::string> SoapyLoopback::getStreamFormats(const int direction, const size_t channel) const {
     std::vector<std::string> formats;
 
     formats.push_back(SOAPY_SDR_CS8);
@@ -42,12 +42,12 @@ std::vector<std::string> SoapyRTLSDR::getStreamFormats(const int direction, cons
     return formats;
 }
 
-std::string SoapyRTLSDR::getNativeStreamFormat(const int direction, const size_t channel, double &fullScale) const {
+std::string SoapyLoopback::getNativeStreamFormat(const int direction, const size_t channel, double &fullScale) const {
 
      return SOAPY_SDR_CS8;
 }
 
-SoapySDR::ArgInfoList SoapyRTLSDR::getStreamArgsInfo(const int direction, const size_t channel) const {
+SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int direction, const size_t channel) const {
     SoapySDR::ArgInfoList streamArgs;
 
     SoapySDR::ArgInfo bufflenArg;
@@ -90,18 +90,18 @@ SoapySDR::ArgInfoList SoapyRTLSDR::getStreamArgsInfo(const int direction, const 
 static void _rx_callback(unsigned char *buf, uint32_t len, void *ctx)
 {
     //printf("_rx_callback\n");
-    SoapyRTLSDR *self = (SoapyRTLSDR *)ctx;
+    SoapyLoopback *self = (SoapyLoopback *)ctx;
     self->rx_callback(buf, len);
 }
 
-void SoapyRTLSDR::rx_async_operation(void)
+void SoapyLoopback::rx_async_operation(void)
 {
     //printf("rx_async_operation\n");
     //rtlsdr_read_async(dev, &_rx_callback, this, asyncBuffs, bufferLength);
     //printf("rx_async_operation done!\n");
 }
 
-void SoapyRTLSDR::rx_callback(unsigned char *buf, uint32_t len)
+void SoapyLoopback::rx_callback(unsigned char *buf, uint32_t len)
 {
     ////printf("_rx_callback %d _buf_head=%d, numBuffers=%d\n", len, _buf_head, _buf_tail);
 //
@@ -140,7 +140,7 @@ void SoapyRTLSDR::rx_callback(unsigned char *buf, uint32_t len)
  * Stream API
  ******************************************************************/
 
-SoapySDR::Stream *SoapyRTLSDR::setupStream(
+SoapySDR::Stream *SoapyLoopback::setupStream(
         const int direction,
         const std::string &format,
         const std::vector<size_t> &channels,
@@ -172,7 +172,7 @@ SoapySDR::Stream *SoapyRTLSDR::setupStream(
     {
         throw std::runtime_error(
                 "setupStream invalid format '" + format
-                        + "' -- Only CS8, CS16 and CF32 are supported by SoapyRTLSDR module.");
+                        + "' -- Only CS8, CS16 and CF32 are supported by SoapyLoopback module.");
     }
 
     if (rxFormat != RTL_RX_FORMAT_INT8 && !_lut_32f.size())
@@ -281,18 +281,18 @@ SoapySDR::Stream *SoapyRTLSDR::setupStream(
     return (SoapySDR::Stream *) this;
 }
 
-void SoapyRTLSDR::closeStream(SoapySDR::Stream *stream)
+void SoapyLoopback::closeStream(SoapySDR::Stream *stream)
 {
     this->deactivateStream(stream, 0, 0);
     _buffs.clear();
 }
 
-size_t SoapyRTLSDR::getStreamMTU(SoapySDR::Stream *stream) const
+size_t SoapyLoopback::getStreamMTU(SoapySDR::Stream *stream) const
 {
     return bufferLength / BYTES_PER_SAMPLE;
 }
 
-int SoapyRTLSDR::activateStream(
+int SoapyLoopback::activateStream(
         SoapySDR::Stream *stream,
         const int flags,
         const long long timeNs,
@@ -306,13 +306,13 @@ int SoapyRTLSDR::activateStream(
     //if (not _rx_async_thread.joinable())
     //{
     //    rtlsdr_reset_buffer(dev);
-    //    _rx_async_thread = std::thread(&SoapyRTLSDR::rx_async_operation, this);
+    //    _rx_async_thread = std::thread(&SoapyLoopback::rx_async_operation, this);
     //}
 
     return 0;
 }
 
-int SoapyRTLSDR::deactivateStream(SoapySDR::Stream *stream, const int flags, const long long timeNs)
+int SoapyLoopback::deactivateStream(SoapySDR::Stream *stream, const int flags, const long long timeNs)
 {
     //if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
     //if (_rx_async_thread.joinable())
@@ -323,7 +323,7 @@ int SoapyRTLSDR::deactivateStream(SoapySDR::Stream *stream, const int flags, con
     return 0;
 }
 
-int SoapyRTLSDR::readStream(
+int SoapyLoopback::readStream(
         SoapySDR::Stream *stream,
         void * const *buffs,
         const size_t numElems,
@@ -441,18 +441,18 @@ int SoapyRTLSDR::readStream(
  * Direct buffer access API
  ******************************************************************/
 
-size_t SoapyRTLSDR::getNumDirectAccessBuffers(SoapySDR::Stream *stream)
+size_t SoapyLoopback::getNumDirectAccessBuffers(SoapySDR::Stream *stream)
 {
     return _buffs.size();
 }
 
-int SoapyRTLSDR::getDirectAccessBufferAddrs(SoapySDR::Stream *stream, const size_t handle, void **buffs)
+int SoapyLoopback::getDirectAccessBufferAddrs(SoapySDR::Stream *stream, const size_t handle, void **buffs)
 {
     buffs[0] = (void *)_buffs[handle].data.data();
     return 0;
 }
 
-int SoapyRTLSDR::acquireReadBuffer(
+int SoapyLoopback::acquireReadBuffer(
     SoapySDR::Stream *stream,
     size_t &handle,
     const void **buffs,
@@ -500,7 +500,7 @@ int SoapyRTLSDR::acquireReadBuffer(
     return _buffs[handle].data.size() / BYTES_PER_SAMPLE;
 }
 
-void SoapyRTLSDR::releaseReadBuffer(
+void SoapyLoopback::releaseReadBuffer(
     SoapySDR::Stream *stream,
     const size_t handle)
 {

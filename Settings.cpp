@@ -23,11 +23,11 @@
  * THE SOFTWARE.
  */
 
-#include "SoapyRTLSDR.hpp"
+#include "SoapyLoopback.hpp"
 #include <SoapySDR/Time.hpp>
 #include <algorithm>
 
-SoapyRTLSDR::SoapyRTLSDR(const SoapySDR::Kwargs &args):
+SoapyLoopback::SoapyLoopback(const SoapySDR::Kwargs &args):
     deviceId(-1),
     //dev(nullptr),
     rxFormat(RTL_RX_FORMAT_FLOAT32),
@@ -80,7 +80,7 @@ SoapyRTLSDR::SoapyRTLSDR(const SoapySDR::Kwargs &args):
     //}
 }
 
-SoapyRTLSDR::~SoapyRTLSDR(void)
+SoapyLoopback::~SoapyLoopback(void)
 {
     //cleanup device handles
     //rtlsdr_close(dev);
@@ -90,17 +90,17 @@ SoapyRTLSDR::~SoapyRTLSDR(void)
  * Identification API
  ******************************************************************/
 
-std::string SoapyRTLSDR::getDriverKey(void) const
+std::string SoapyLoopback::getDriverKey(void) const
 {
     return "LoopbackDriver";
 }
 
-std::string SoapyRTLSDR::getHardwareKey(void) const
+std::string SoapyLoopback::getHardwareKey(void) const
 {
     return "LoopbackHardware";
 }
 
-SoapySDR::Kwargs SoapyRTLSDR::getHardwareInfo(void) const
+SoapySDR::Kwargs SoapyLoopback::getHardwareInfo(void) const
 {
     //key/value pairs for any useful information
     //this also gets printed in --probe
@@ -116,12 +116,12 @@ SoapySDR::Kwargs SoapyRTLSDR::getHardwareInfo(void) const
  * Channels API
  ******************************************************************/
 
-size_t SoapyRTLSDR::getNumChannels(const int dir) const
+size_t SoapyLoopback::getNumChannels(const int dir) const
 {
     return 2;
 }
 
-bool SoapyRTLSDR::getFullDuplex(const int direction, const size_t channel) const
+bool SoapyLoopback::getFullDuplex(const int direction, const size_t channel) const
 {
     return true;
 }
@@ -130,7 +130,7 @@ bool SoapyRTLSDR::getFullDuplex(const int direction, const size_t channel) const
  * Antenna API
  ******************************************************************/
 
-std::vector<std::string> SoapyRTLSDR::listAntennas(const int direction, const size_t channel) const
+std::vector<std::string> SoapyLoopback::listAntennas(const int direction, const size_t channel) const
 {
     std::vector<std::string> antennas;
     antennas.push_back("RX");
@@ -138,7 +138,7 @@ std::vector<std::string> SoapyRTLSDR::listAntennas(const int direction, const si
     return antennas;
 }
 
-void SoapyRTLSDR::setAntenna(const int direction, const size_t channel, const std::string &name)
+void SoapyLoopback::setAntenna(const int direction, const size_t channel, const std::string &name)
 {
     if (direction != SOAPY_SDR_RX)
     {
@@ -146,7 +146,7 @@ void SoapyRTLSDR::setAntenna(const int direction, const size_t channel, const st
     }
 }
 
-std::string SoapyRTLSDR::getAntenna(const int direction, const size_t channel) const
+std::string SoapyLoopback::getAntenna(const int direction, const size_t channel) const
 {
     return direction ? "RX" : "TX";
 }
@@ -155,22 +155,22 @@ std::string SoapyRTLSDR::getAntenna(const int direction, const size_t channel) c
  * Frontend corrections API
  ******************************************************************/
 
-bool SoapyRTLSDR::hasDCOffsetMode(const int direction, const size_t channel) const
+bool SoapyLoopback::hasDCOffsetMode(const int direction, const size_t channel) const
 {
     return false;
 }
 
-bool SoapyRTLSDR::hasFrequencyCorrection(const int direction, const size_t channel) const
+bool SoapyLoopback::hasFrequencyCorrection(const int direction, const size_t channel) const
 {
     return true;
 }
 
-void SoapyRTLSDR::setFrequencyCorrection(const int direction, const size_t channel, const double value)
+void SoapyLoopback::setFrequencyCorrection(const int direction, const size_t channel, const double value)
 {
     ppm = int(value);
 }
 
-double SoapyRTLSDR::getFrequencyCorrection(const int direction, const size_t channel) const
+double SoapyLoopback::getFrequencyCorrection(const int direction, const size_t channel) const
 {
     return double(ppm);
 }
@@ -179,7 +179,7 @@ double SoapyRTLSDR::getFrequencyCorrection(const int direction, const size_t cha
  * Gain API
  ******************************************************************/
 
-std::vector<std::string> SoapyRTLSDR::listGains(const int direction, const size_t channel) const
+std::vector<std::string> SoapyLoopback::listGains(const int direction, const size_t channel) const
 {
     //list available gain elements,
     //the functions below have a "name" parameter
@@ -199,29 +199,29 @@ std::vector<std::string> SoapyRTLSDR::listGains(const int direction, const size_
     return results;
 }
 
-bool SoapyRTLSDR::hasGainMode(const int direction, const size_t channel) const
+bool SoapyLoopback::hasGainMode(const int direction, const size_t channel) const
 {
     return true;
 }
 
-void SoapyRTLSDR::setGainMode(const int direction, const size_t channel, const bool automatic)
+void SoapyLoopback::setGainMode(const int direction, const size_t channel, const bool automatic)
 {
     gainMode = automatic;
 }
 
-bool SoapyRTLSDR::getGainMode(const int direction, const size_t channel) const
+bool SoapyLoopback::getGainMode(const int direction, const size_t channel) const
 {
     return gainMode;
 }
 
-void SoapyRTLSDR::setGain(const int direction, const size_t channel, const double value)
+void SoapyLoopback::setGain(const int direction, const size_t channel, const double value)
 {
     //set the overall gain by distributing it across available gain elements
     //OR delete this function to use SoapySDR's default gain distribution algorithm...
     SoapySDR::Device::setGain(direction, channel, value);
 }
 
-void SoapyRTLSDR::setGain(const int direction, const size_t channel, const std::string &name, const double value)
+void SoapyLoopback::setGain(const int direction, const size_t channel, const std::string &name, const double value)
 {
     //if ((name.length() >= 2) && (name.substr(0, 2) == "IF"))
     //{
@@ -251,7 +251,7 @@ void SoapyRTLSDR::setGain(const int direction, const size_t channel, const std::
     //}
 }
 
-double SoapyRTLSDR::getGain(const int direction, const size_t channel, const std::string &name) const
+double SoapyLoopback::getGain(const int direction, const size_t channel, const std::string &name) const
 {
     //if ((name.length() >= 2) && (name.substr(0, 2) == "IF"))
     //{
@@ -281,7 +281,7 @@ double SoapyRTLSDR::getGain(const int direction, const size_t channel, const std
     //return 0;
 }
 
-SoapySDR::Range SoapyRTLSDR::getGainRange(const int direction, const size_t channel, const std::string &name) const
+SoapySDR::Range SoapyLoopback::getGainRange(const int direction, const size_t channel, const std::string &name) const
 {
     //if (tunerType == RTLSDR_TUNER_E4000 && name != "TUNER") {
     //    if (name == "IF1") {
@@ -307,7 +307,7 @@ SoapySDR::Range SoapyRTLSDR::getGainRange(const int direction, const size_t chan
  * Frequency API
  ******************************************************************/
 
-void SoapyRTLSDR::setFrequency(
+void SoapyLoopback::setFrequency(
         const int direction,
         const size_t channel,
         const std::string &name,
@@ -340,7 +340,7 @@ void SoapyRTLSDR::setFrequency(
     //}
 }
 
-double SoapyRTLSDR::getFrequency(const int direction, const size_t channel, const std::string &name) const
+double SoapyLoopback::getFrequency(const int direction, const size_t channel, const std::string &name) const
 {
     if (name == "RF")
     {
@@ -355,7 +355,7 @@ double SoapyRTLSDR::getFrequency(const int direction, const size_t channel, cons
     return 0;
 }
 
-std::vector<std::string> SoapyRTLSDR::listFrequencies(const int direction, const size_t channel) const
+std::vector<std::string> SoapyLoopback::listFrequencies(const int direction, const size_t channel) const
 {
     std::vector<std::string> names;
     names.push_back("RF");
@@ -363,7 +363,7 @@ std::vector<std::string> SoapyRTLSDR::listFrequencies(const int direction, const
     return names;
 }
 
-SoapySDR::RangeList SoapyRTLSDR::getFrequencyRange(
+SoapySDR::RangeList SoapyLoopback::getFrequencyRange(
         const int direction,
         const size_t channel,
         const std::string &name) const
@@ -380,7 +380,7 @@ SoapySDR::RangeList SoapyRTLSDR::getFrequencyRange(
     return results;
 }
 
-SoapySDR::ArgInfoList SoapyRTLSDR::getFrequencyArgsInfo(const int direction, const size_t channel) const
+SoapySDR::ArgInfoList SoapyLoopback::getFrequencyArgsInfo(const int direction, const size_t channel) const
 {
     SoapySDR::ArgInfoList freqArgs;
 
@@ -393,7 +393,7 @@ SoapySDR::ArgInfoList SoapyRTLSDR::getFrequencyArgsInfo(const int direction, con
  * Sample Rate API
  ******************************************************************/
 
-void SoapyRTLSDR::setSampleRate(const int direction, const size_t channel, const double rate)
+void SoapyLoopback::setSampleRate(const int direction, const size_t channel, const double rate)
 {
     //long long ns = SoapySDR::ticksToTimeNs(ticks, sampleRate);
     //sampleRate = rate;
@@ -412,12 +412,12 @@ void SoapyRTLSDR::setSampleRate(const int direction, const size_t channel, const
     //ticks = SoapySDR::timeNsToTicks(ns, sampleRate);
 }
 
-double SoapyRTLSDR::getSampleRate(const int direction, const size_t channel) const
+double SoapyLoopback::getSampleRate(const int direction, const size_t channel) const
 {
     return sampleRate;
 }
 
-std::vector<double> SoapyRTLSDR::listSampleRates(const int direction, const size_t channel) const
+std::vector<double> SoapyLoopback::listSampleRates(const int direction, const size_t channel) const
 {
     std::vector<double> results;
 
@@ -435,7 +435,7 @@ std::vector<double> SoapyRTLSDR::listSampleRates(const int direction, const size
     return results;
 }
 
-SoapySDR::RangeList SoapyRTLSDR::getSampleRateRange(const int direction, const size_t channel) const
+SoapySDR::RangeList SoapyLoopback::getSampleRateRange(const int direction, const size_t channel) const
 {
     SoapySDR::RangeList results;
 
@@ -445,26 +445,26 @@ SoapySDR::RangeList SoapyRTLSDR::getSampleRateRange(const int direction, const s
     return results;
 }
 
-void SoapyRTLSDR::setBandwidth(const int direction, const size_t channel, const double bw)
+void SoapyLoopback::setBandwidth(const int direction, const size_t channel, const double bw)
 {
     bandwidth = bw;
 }
 
-double SoapyRTLSDR::getBandwidth(const int direction, const size_t channel) const
+double SoapyLoopback::getBandwidth(const int direction, const size_t channel) const
 {
     if (bandwidth == 0) // auto / full bandwidth
         return sampleRate;
     return bandwidth;
 }
 
-std::vector<double> SoapyRTLSDR::listBandwidths(const int direction, const size_t channel) const
+std::vector<double> SoapyLoopback::listBandwidths(const int direction, const size_t channel) const
 {
     std::vector<double> results;
 
     return results;
 }
 
-SoapySDR::RangeList SoapyRTLSDR::getBandwidthRange(const int direction, const size_t channel) const
+SoapySDR::RangeList SoapyLoopback::getBandwidthRange(const int direction, const size_t channel) const
 {
     SoapySDR::RangeList results;
 
@@ -478,7 +478,7 @@ SoapySDR::RangeList SoapyRTLSDR::getBandwidthRange(const int direction, const si
  * Time API
  ******************************************************************/
 
-std::vector<std::string> SoapyRTLSDR::listTimeSources(void) const
+std::vector<std::string> SoapyLoopback::listTimeSources(void) const
 {
     std::vector<std::string> results;
 
@@ -487,22 +487,22 @@ std::vector<std::string> SoapyRTLSDR::listTimeSources(void) const
     return results;
 }
 
-std::string SoapyRTLSDR::getTimeSource(void) const
+std::string SoapyLoopback::getTimeSource(void) const
 {
     return "sw_ticks";
 }
 
-bool SoapyRTLSDR::hasHardwareTime(const std::string &what) const
+bool SoapyLoopback::hasHardwareTime(const std::string &what) const
 {
     return what == "" || what == "sw_ticks";
 }
 
-long long SoapyRTLSDR::getHardwareTime(const std::string &what) const
+long long SoapyLoopback::getHardwareTime(const std::string &what) const
 {
     return SoapySDR::ticksToTimeNs(ticks, sampleRate);
 }
 
-void SoapyRTLSDR::setHardwareTime(const long long timeNs, const std::string &what)
+void SoapyLoopback::setHardwareTime(const long long timeNs, const std::string &what)
 {
     ticks = SoapySDR::timeNsToTicks(timeNs, sampleRate);
 }
@@ -511,7 +511,7 @@ void SoapyRTLSDR::setHardwareTime(const long long timeNs, const std::string &wha
  * Settings API
  ******************************************************************/
 
-SoapySDR::ArgInfoList SoapyRTLSDR::getSettingInfo(void) const
+SoapySDR::ArgInfoList SoapyLoopback::getSettingInfo(void) const
 {
     SoapySDR::ArgInfoList setArgs;
 
@@ -577,7 +577,7 @@ SoapySDR::ArgInfoList SoapyRTLSDR::getSettingInfo(void) const
     return setArgs;
 }
 
-void SoapyRTLSDR::writeSetting(const std::string &key, const std::string &value)
+void SoapyLoopback::writeSetting(const std::string &key, const std::string &value)
 {
     //if (key == "direct_samp")
     //{
@@ -619,7 +619,7 @@ void SoapyRTLSDR::writeSetting(const std::string &key, const std::string &value)
 #endif
 }
 
-std::string SoapyRTLSDR::readSetting(const std::string &key) const
+std::string SoapyLoopback::readSetting(const std::string &key) const
 {
     if (key == "direct_samp") {
         return std::to_string(directSamplingMode);

@@ -42,12 +42,12 @@ typedef enum rtlsdrRXFormat
 #define DEFAULT_NUM_BUFFERS 15
 #define BYTES_PER_SAMPLE 2
 
-class SoapyRTLSDR: public SoapySDR::Device
+class SoapyLoopback: public SoapySDR::Device
 {
 public:
-    SoapyRTLSDR(const SoapySDR::Kwargs &args);
+    SoapyLoopback(const SoapySDR::Kwargs &args);
 
-    ~SoapyRTLSDR(void);
+    ~SoapyLoopback(void);
 
     /*******************************************************************
      * Identification API

@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-#include "SoapyRTLSDR.hpp"
+#include "SoapyLoopback.hpp"
 #include <SoapySDR/Registry.hpp>
 
 static std::string get_tuner(const std::string &serial, const size_t deviceIndex)
@@ -49,7 +49,7 @@ static std::vector<SoapySDR::Kwargs> findRTLSDR(const SoapySDR::Kwargs &args)
 
 static SoapySDR::Device *makeRTLSDR(const SoapySDR::Kwargs &args)
 {
-    return new SoapyRTLSDR(args);
+    return new SoapyLoopback(args);
 }
 
 static SoapySDR::Registry registerRTLSDR("loopback", &findRTLSDR, &makeRTLSDR, SOAPY_SDR_ABI_VERSION);
