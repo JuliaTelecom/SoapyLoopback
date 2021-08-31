@@ -159,6 +159,9 @@ std::vector<std::string> SoapyLoopback::listGains(const int direction, const siz
     results.push_back("IF1");
     results.push_back("IF2");
     results.push_back("IF3");
+    results.push_back("IF4");
+    results.push_back("IF5");
+    results.push_back("IF6");
     results.push_back("TUNER");
 
     return results;
@@ -188,84 +191,74 @@ void SoapyLoopback::setGain(const int direction, const size_t channel, const dou
 
 void SoapyLoopback::setGain(const int direction, const size_t channel, const std::string &name, const double value)
 {
-    //if ((name.length() >= 2) && (name.substr(0, 2) == "IF"))
-    //{
-    //    int stage = 1;
-    //    if (name.length() > 2)
-    //    {
-    //        int stage_in = name.at(2) - '0';
-    //        if ((stage_in < 1) || (stage_in > 6))
-    //        {
-    //            throw std::runtime_error("Invalid IF stage, 1 or 1-6 for E4000");
-    //        }
-    //    }
-    //    if (tunerType == RTLSDR_TUNER_E4000) {
-    //        IFGain[stage - 1] = getE4000Gain(stage, (int)value);
-    //    } else {
-    //        IFGain[stage - 1] = value;
-    //    }
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting RTL-SDR IF Gain for stage %d: %f", stage, IFGain[stage - 1]);
-    //    rtlsdr_set_tuner_if_gain(dev, stage, (int) IFGain[stage - 1] * 10.0);
-    //}
-//
-    //if (name == "TUNER")
-    //{
-    //    tunerGain = value;
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting RTL-SDR Tuner Gain: %f", tunerGain);
-    //    rtlsdr_set_tuner_gain(dev, (int) tunerGain * 10.0);
-    //}
+    if ((name.length() >= 2) && (name.substr(0, 2) == "IF"))
+    {
+        int stage = 1;
+        if (name.length() > 2)
+        {
+            int stage_in = name.at(2) - '0';
+            if ((stage_in < 1) || (stage_in > 6))
+            {
+                throw std::runtime_error("Invalid IF stage, 1 or 1-6 for E4000");
+            }
+        }
+        IFGain[stage - 1] = value;
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting Loopback IF Gain for stage %d: %f", stage, IFGain[stage - 1]);    }
+
+    if (name == "TUNER")
+    {
+        tunerGain = value;
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting Loopback Tuner Gain: %f", tunerGain);
+    }
 }
 
 double SoapyLoopback::getGain(const int direction, const size_t channel, const std::string &name) const
 {
-    //if ((name.length() >= 2) && (name.substr(0, 2) == "IF"))
-    //{
-    //    int stage = 1;
-    //    if (name.length() > 2)
-    //    {
-    //        int stage_in = name.at(2) - '0';
-    //        if ((stage_in < 1) || (stage_in > 6))
-    //        {
-    //            throw std::runtime_error("Invalid IF stage, 1 or 1-6 for E4000");
-    //        } else {
-    //            stage = stage_in;
-    //        }
-    //    }
-    //    if (tunerType == RTLSDR_TUNER_E4000) {
-    //        return getE4000Gain(stage, IFGain[stage - 1]);
-    //    }
-//
-    //    return IFGain[stage - 1];
-    //}
-//
-    //if (name == "TUNER")
-    //{
-    //    return tunerGain;
-    //}
-//
-    //return 0;
+    if ((name.length() >= 2) && (name.substr(0, 2) == "IF"))
+    {
+        int stage = 1;
+        if (name.length() > 2)
+        {
+            int stage_in = name.at(2) - '0';
+            if ((stage_in < 1) || (stage_in > 6))
+            {
+                throw std::runtime_error("Invalid IF stage, 1 or 1-6 for E4000");
+            } else {
+                stage = stage_in;
+            }
+        }
+
+        return IFGain[stage - 1];
+    }
+
+    if (name == "TUNER")
+    {
+        return tunerGain;
+    }
+
+    return 0;
 }
 
 SoapySDR::Range SoapyLoopback::getGainRange(const int direction, const size_t channel, const std::string &name) const
 {
-    //if (tunerType == RTLSDR_TUNER_E4000 && name != "TUNER") {
-    //    if (name == "IF1") {
-    //        return SoapySDR::Range(-3, 6);
-    //    }
-    //    if (name == "IF2" || name == "IF3") {
-    //        return SoapySDR::Range(0, 9);
-    //    }
-    //    if (name == "IF4") {
-    //        return SoapySDR::Range(0, 2);
-    //    }
-    //    if (name == "IF5" || name == "IF6") {
-           return SoapySDR::Range(3, 15);
-    //    }
-//
-    //    return SoapySDR::Range(gainMin, gainMax);
-    //} else {
-    //    return SoapySDR::Range(gainMin, gainMax);
-    //}
+    if (name != "TUNER") {
+        if (name == "IF1") {
+            return SoapySDR::Range(-3, 6);
+        }
+        if (name == "IF2" || name == "IF3") {
+            return SoapySDR::Range(0, 9);
+        }
+        if (name == "IF4") {
+            return SoapySDR::Range(0, 2);
+        }
+        if (name == "IF5" || name == "IF6") {
+     return SoapySDR::Range(3, 15);
+        }
+
+        return SoapySDR::Range(gainMin, gainMax);
+    } else {
+        return SoapySDR::Range(gainMin, gainMax);
+    }
 }
 
 /*******************************************************************
@@ -574,10 +567,6 @@ std::string SoapyLoopback::readSetting(const std::string &key) const
         return offsetMode?"true":"false";
     } else if (key == "digital_agc") {
         return digitalAGC?"true":"false";
-#if HAS_RTLSDR_SET_BIAS_TEE
-    } else if (key == "biastee") {
-        return biasTee?"true":"false";
-#endif
     }
 
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
