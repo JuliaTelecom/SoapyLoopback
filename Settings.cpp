@@ -30,7 +30,6 @@
 SoapyLoopback::SoapyLoopback(const SoapySDR::Kwargs &args):
     deviceId(-1),
     //dev(nullptr),
-    rxFormat(RTL_RX_FORMAT_FLOAT32),
     //tunerType(RTLSDR_TUNER_R820T),
     sampleRate(2048000),
     centerFrequency(100000000),
@@ -43,41 +42,13 @@ SoapyLoopback::SoapyLoopback(const SoapySDR::Kwargs &args):
     gainMode(false),
     offsetMode(false),
     digitalAGC(false),
-#if HAS_RTLSDR_SET_BIAS_TEE
-    biasTee(false),
-#endif
     ticks(false),
     bufferedElems(0),
     resetBuffer(false),
     gainMin(0.0),
     gainMax(0.0)
 {
-    //if (args.count("label") != 0) SoapySDR_logf(SOAPY_SDR_INFO, "Opening %s...", args.at("label").c_str());
-//
-    ////if a serial is not present, then findRTLSDR had zero devices enumerated
-    //if (args.count("serial") == 0) throw std::runtime_error("No RTL-SDR devices found!");
-//
-    //const auto serial = args.at("serial");
-    //deviceId = rtlsdr_get_index_by_serial(serial.c_str());
-    //if (deviceId < 0) throw std::runtime_error("rtlsdr_get_index_by_serial("+serial+") - " + std::to_string(deviceId));
-//
-    //if (args.count("tuner") != 0) tunerType = rtlStringToTuner(args.at("tuner"));
-    //SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR Tuner type: %s", rtlTunerToString(tunerType).c_str());
-//
-    //SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR opening device %d", deviceId);
-    //if (rtlsdr_open(&dev, deviceId) != 0) {
-    //    throw std::runtime_error("Unable to open RTL-SDR device");
-    //}
-//
-    ////extract min/max overall gain range
-    //int num_gains = rtlsdr_get_tuner_gains(dev, nullptr);
-    //if (num_gains > 0)
-    //{
-    //    std::vector<int> gains(num_gains);
-    //    rtlsdr_get_tuner_gains(dev, gains.data());
-    //    gainMin = *std::min_element(gains.begin(), gains.end()) / 10.0;
-    //    gainMax = *std::max_element(gains.begin(), gains.end()) / 10.0;
-    //}
+
 }
 
 SoapyLoopback::~SoapyLoopback(void)
@@ -123,7 +94,7 @@ size_t SoapyLoopback::getNumChannels(const int dir) const
 
 bool SoapyLoopback::getFullDuplex(const int direction, const size_t channel) const
 {
-    return true;
+    return false;
 }
 
 /*******************************************************************
@@ -185,15 +156,9 @@ std::vector<std::string> SoapyLoopback::listGains(const int direction, const siz
     //the functions below have a "name" parameter
     std::vector<std::string> results;
 
-    //if (tunerType == RTLSDR_TUNER_E4000)
-    //{
-        results.push_back("IF1");
-        results.push_back("IF2");
-        results.push_back("IF3");
-        results.push_back("IF4");
-        results.push_back("IF5");
-        results.push_back("IF6");
-    //}
+    results.push_back("IF1");
+    results.push_back("IF2");
+    results.push_back("IF3");
     results.push_back("TUNER");
 
     return results;
@@ -560,18 +525,6 @@ SoapySDR::ArgInfoList SoapyLoopback::getSettingInfo(void) const
 
     setArgs.push_back(digitalAGCArg);
 
-#if HAS_RTLSDR_SET_BIAS_TEE
-    SoapySDR::ArgInfo biasTeeArg;
-
-    biasTeeArg.key = "biastee";
-    biasTeeArg.value = "false";
-    biasTeeArg.name = "Bias Tee";
-    biasTeeArg.description = "RTL-SDR Blog V.3 Bias-Tee Mode";
-    biasTeeArg.type = SoapySDR::ArgInfo::BOOL;
-
-    setArgs.push_back(biasTeeArg);
-#endif
-
     SoapySDR_logf(SOAPY_SDR_DEBUG, "SETARGS?");
 
     return setArgs;
@@ -609,14 +562,6 @@ void SoapyLoopback::writeSetting(const std::string &key, const std::string &valu
     //    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR digital agc mode: %s", digitalAGC ? "true" : "false");
     //    rtlsdr_set_agc_mode(dev, digitalAGC ? 1 : 0);
     //}
-#if HAS_RTLSDR_SET_BIAS_TEE
-    else if (key == "biastee")
-    {
-        biasTee = (value == "true") ? true: false;
-        SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR bias tee mode: %s", biasTee ? "true" : "false");
-        rtlsdr_set_bias_tee(dev, biasTee ? 1 : 0);
-    }
-#endif
 }
 
 std::string SoapyLoopback::readSetting(const std::string &key) const

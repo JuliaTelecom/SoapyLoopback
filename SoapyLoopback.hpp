@@ -33,11 +33,6 @@
 #include <condition_variable>
 #include <atomic>
 
-typedef enum rtlsdrRXFormat
-{
-    RTL_RX_FORMAT_FLOAT32, RTL_RX_FORMAT_INT16, RTL_RX_FORMAT_INT8
-} rtlsdrRXFormat;
-
 #define DEFAULT_BUFFER_LENGTH (16 * 32 * 512)
 #define DEFAULT_NUM_BUFFERS 15
 #define BYTES_PER_SAMPLE 2
@@ -240,8 +235,6 @@ private:
     int deviceId;
     //rtlsdr_dev_t *dev;
 
-    //cached settings
-    rtlsdrRXFormat rxFormat;
     //int tunerType;
     uint32_t sampleRate, centerFrequency, bandwidth;
     int ppm, directSamplingMode;

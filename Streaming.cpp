@@ -36,6 +36,7 @@ std::vector<std::string> SoapyLoopback::getStreamFormats(const int direction, co
     std::vector<std::string> formats;
 
     formats.push_back(SOAPY_SDR_CS8);
+    formats.push_back(SOAPY_SDR_CS12);
     formats.push_back(SOAPY_SDR_CS16);
     formats.push_back(SOAPY_SDR_CF32);
 
@@ -44,7 +45,7 @@ std::vector<std::string> SoapyLoopback::getStreamFormats(const int direction, co
 
 std::string SoapyLoopback::getNativeStreamFormat(const int direction, const size_t channel, double &fullScale) const {
 
-     return SOAPY_SDR_CS8;
+     return SOAPY_SDR_CS12;
 }
 
 SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int direction, const size_t channel) const {
@@ -87,53 +88,46 @@ SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int direction, cons
  * Async thread work
  ******************************************************************/
 
-static void _rx_callback(unsigned char *buf, uint32_t len, void *ctx)
-{
-    //printf("_rx_callback\n");
-    SoapyLoopback *self = (SoapyLoopback *)ctx;
-    self->rx_callback(buf, len);
-}
-
 void SoapyLoopback::rx_async_operation(void)
 {
-    //printf("rx_async_operation\n");
+    printf("rx_async_operation\n");
     //rtlsdr_read_async(dev, &_rx_callback, this, asyncBuffs, bufferLength);
-    //printf("rx_async_operation done!\n");
+    printf("rx_async_operation done!\n");
 }
 
 void SoapyLoopback::rx_callback(unsigned char *buf, uint32_t len)
 {
-    ////printf("_rx_callback %d _buf_head=%d, numBuffers=%d\n", len, _buf_head, _buf_tail);
-//
-    //// atomically add len to ticks but return the previous value
-    //unsigned long long tick = ticks.fetch_add(len);
-//
-    ////overflow condition: the caller is not reading fast enough
-    //if (_buf_count == numBuffers)
-    //{
-    //    _overflowEvent = true;
-    //    return;
-    //}
-//
-    ////copy into the buffer queue
-    //auto &buff = _buffs[_buf_tail];
-    //buff.tick = tick;
-    //buff.data.resize(len);
-    //std::memcpy(buff.data.data(), buf, len);
-//
-    ////increment the tail pointer
-    //_buf_tail = (_buf_tail + 1) % numBuffers;
-//
-    ////increment buffers available under lock
-    ////to avoid race in acquireReadBuffer wait
-    //{
-    //std::lock_guard<std::mutex> lock(_buf_mutex);
-    //_buf_count++;
-//
-    //}
-//
-    ////notify readStream()
-    //_buf_cond.notify_one();
+    //printf("_rx_callback %d _buf_head=%d, numBuffers=%d\n", len, _buf_head, _buf_tail);
+
+    // atomically add len to ticks but return the previous value
+    unsigned long long tick = ticks.fetch_add(len);
+
+    //overflow condition: the caller is not reading fast enough
+    if (_buf_count == numBuffers)
+    {
+        _overflowEvent = true;
+        return;
+    }
+
+    //copy into the buffer queue
+    auto &buff = _buffs[_buf_tail];
+    buff.tick = tick;
+    buff.data.resize(len);
+    std::memcpy(buff.data.data(), buf, len);
+
+    //increment the tail pointer
+    _buf_tail = (_buf_tail + 1) % numBuffers;
+
+    //increment buffers available under lock
+    //to avoid race in acquireReadBuffer wait
+    {
+    std::lock_guard<std::mutex> lock(_buf_mutex);
+    _buf_count++;
+
+    }
+
+    //notify readStream()
+    _buf_cond.notify_one();
 }
 
 /*******************************************************************
@@ -157,58 +151,27 @@ SoapySDR::Stream *SoapyLoopback::setupStream(
     if (format == SOAPY_SDR_CF32)
     {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CF32.");
-        rxFormat = RTL_RX_FORMAT_FLOAT32;
+        //rxFormat = RTL_RX_FORMAT_FLOAT32;
+    }
+    else if (format == SOAPY_SDR_CS12)
+    {
+        SoapySDR_log(SOAPY_SDR_INFO, "Using format CS12.");
+        //rxFormat = RTL_RX_FORMAT_INT16;
     }
     else if (format == SOAPY_SDR_CS16)
     {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CS16.");
-        rxFormat = RTL_RX_FORMAT_INT16;
+        //rxFormat = RTL_RX_FORMAT_INT16;
     }
     else if (format == SOAPY_SDR_CS8) {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CS8.");
-        rxFormat = RTL_RX_FORMAT_INT8;
+        //rxFormat = RTL_RX_FORMAT_INT8;
     }
     else
     {
         throw std::runtime_error(
                 "setupStream invalid format '" + format
                         + "' -- Only CS8, CS16 and CF32 are supported by SoapyLoopback module.");
-    }
-
-    if (rxFormat != RTL_RX_FORMAT_INT8 && !_lut_32f.size())
-    {
-        SoapySDR_logf(SOAPY_SDR_DEBUG, "Generating RTL-SDR lookup tables");
-        // create lookup tables
-        for (unsigned int i = 0; i <= 0xffff; i++)
-        {
-# if (__BYTE_ORDER == __LITTLE_ENDIAN)
-            float re = ((i & 0xff) - 127.4f) * (1.0f / 128.0f);
-            float im = ((i >> 8) - 127.4f) * (1.0f / 128.0f);
-#else
-            float re = ((i >> 8) - 127.4f) * (1.0f / 128.0f);
-            float im = ((i & 0xff) - 127.4f) * (1.0f / 128.0f);
-#endif
-
-            std::complex<float> v32f, vs32f;
-
-            v32f.real(re);
-            v32f.imag(im);
-            _lut_32f.push_back(v32f);
-
-            vs32f.real(v32f.imag());
-            vs32f.imag(v32f.real());
-            _lut_swap_32f.push_back(vs32f);
-
-            std::complex<int16_t> v16i, vs16i;
-
-            v16i.real(int16_t((float(SHRT_MAX) * re)));
-            v16i.imag(int16_t((float(SHRT_MAX) * im)));
-            _lut_16i.push_back(v16i);
-
-            vs16i.real(vs16i.imag());
-            vs16i.imag(vs16i.real());
-            _lut_swap_16i.push_back(vs16i);
-        }
     }
 
     bufferLength = DEFAULT_BUFFER_LENGTH;
@@ -298,28 +261,26 @@ int SoapyLoopback::activateStream(
         const long long timeNs,
         const size_t numElems)
 {
-    //if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
-    //resetBuffer = true;
-    //bufferedElems = 0;
-//
-    ////start the async thread
-    //if (not _rx_async_thread.joinable())
-    //{
-    //    rtlsdr_reset_buffer(dev);
-    //    _rx_async_thread = std::thread(&SoapyLoopback::rx_async_operation, this);
-    //}
+    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
+    resetBuffer = true;
+    bufferedElems = 0;
+
+    //start the async thread
+    if (not _rx_async_thread.joinable())
+    {
+        _rx_async_thread = std::thread(&SoapyLoopback::rx_async_operation, this);
+    }
 
     return 0;
 }
 
 int SoapyLoopback::deactivateStream(SoapySDR::Stream *stream, const int flags, const long long timeNs)
 {
-    //if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
-    //if (_rx_async_thread.joinable())
-    //{
-    //    rtlsdr_cancel_async(dev);
-    //    _rx_async_thread.join();
-    //}
+    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
+    if (_rx_async_thread.joinable())
+    {
+        _rx_async_thread.join();
+    }
     return 0;
 }
 
@@ -357,74 +318,6 @@ int SoapyLoopback::readStream(
     }
 
     size_t returnedElems = std::min(bufferedElems, numElems);
-
-    //convert into user's buff0
-    if (rxFormat == RTL_RX_FORMAT_FLOAT32)
-    {
-        float *ftarget = (float *) buff0;
-        std::complex<float> tmp;
-        if (iqSwap)
-        {
-            for (size_t i = 0; i < returnedElems; i++)
-            {
-                tmp = _lut_swap_32f[*((uint16_t*) &_currentBuff[2 * i])];
-                ftarget[i * 2] = tmp.real();
-                ftarget[i * 2 + 1] = tmp.imag();
-            }
-        }
-        else
-        {
-            for (size_t i = 0; i < returnedElems; i++)
-            {
-                tmp = _lut_32f[*((uint16_t*) &_currentBuff[2 * i])];
-                ftarget[i * 2] = tmp.real();
-                ftarget[i * 2 + 1] = tmp.imag();
-            }
-        }
-    }
-    else if (rxFormat == RTL_RX_FORMAT_INT16)
-    {
-        int16_t *itarget = (int16_t *) buff0;
-        std::complex<int16_t> tmp;
-        if (iqSwap)
-        {
-            for (size_t i = 0; i < returnedElems; i++)
-            {
-                tmp = _lut_swap_16i[*((uint16_t*) &_currentBuff[2 * i])];
-                itarget[i * 2] = tmp.real();
-                itarget[i * 2 + 1] = tmp.imag();
-            }
-        }
-        else
-        {
-            for (size_t i = 0; i < returnedElems; i++)
-            {
-                tmp = _lut_16i[*((uint16_t*) &_currentBuff[2 * i])];
-                itarget[i * 2] = tmp.real();
-                itarget[i * 2 + 1] = tmp.imag();
-            }
-        }
-    }
-    else if (rxFormat == RTL_RX_FORMAT_INT8)
-    {
-        int8_t *itarget = (int8_t *) buff0;
-        if (iqSwap)
-        {
-            for (size_t i = 0; i < returnedElems; i++)
-            {
-                itarget[i * 2] = _currentBuff[i * 2 + 1]-128;
-                itarget[i * 2 + 1] = _currentBuff[i * 2]-128;
-            }
-        }
-        else
-        {
-            for (size_t i = 0; i < returnedElems; i++)
-            {
-                itarget[i * 2] = _currentBuff[i * 2]-128;
-                itarget[i * 2 + 1] = _currentBuff[i * 2 + 1]-128;
-            }
-        }
-    }
 
     //bump variables for next call into readStream
     bufferedElems -= returnedElems;
