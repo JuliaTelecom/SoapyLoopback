@@ -210,14 +210,37 @@ public:
 
     void setHardwareTime(const long long timeNs, const std::string &what = "");
 
-    /*******************************************************************
-     * Utility
+ /*******************************************************************
+     * Clocking API
      ******************************************************************/
 
-    //static std::string rtlTunerToString(rtlsdr_tuner tunerType);
-    //static rtlsdr_tuner rtlStringToTuner(std::string tunerType);
-    //static int getE4000Gain(int stage, int gain);
+    void setMasterClockRate(const double rate);
 
+    double getMasterClockRate(void) const;
+
+    SoapySDR::RangeList getMasterClockRates(void) const;
+
+    std::vector<std::string> listClockSources(void) const;
+
+    void setClockSource(const std::string &source);
+
+    std::string getClockSource(void) const;
+
+    /*******************************************************************
+     * Sensor API
+     ******************************************************************/
+
+    std::vector<std::string> listSensors(void) const;
+
+    SoapySDR::ArgInfo getSensorInfo(const std::string &name) const;
+
+    std::string readSensor(const std::string &name) const;
+
+    std::vector<std::string> listSensors(const int direction, const size_t channel) const;
+
+    SoapySDR::ArgInfo getSensorInfo(const int direction, const size_t channel, const std::string &name) const;
+
+    std::string readSensor(const int direction, const size_t channel, const std::string &name) const;
 
     /*******************************************************************
      * Settings API
@@ -234,6 +257,9 @@ private:
     //device handle
     int deviceId;
     //rtlsdr_dev_t *dev;
+
+    // clock API
+    std::string _ref_source;
 
     //int tunerType;
     uint32_t sampleRate, centerFrequency, bandwidth;

@@ -540,3 +540,147 @@ std::string SoapyLoopback::readSetting(const std::string &key) const
     SoapySDR_logf(SOAPY_SDR_WARNING, "Unknown setting '%s'", key.c_str());
     return "";
 }
+
+/*******************************************************************
+ * Clocking API
+ ******************************************************************/
+
+void SoapyLoopback::setMasterClockRate(const double rate)
+{
+	//std::unique_lock<std::recursive_mutex> lock(_dev->accessMutex);
+	//_ref_clk = rate;
+	// xtrx_set_ref_clk(_dev->dev(), _ref_clk, _ref_source);
+	// TODO: get reference clock in case of autodetection
+}
+
+double SoapyLoopback::getMasterClockRate(void) const
+{
+	return 0;
+	//std::unique_lock<std::recursive_mutex> lock(_dev->accessMutex);
+	//int64_t v;
+
+	//int res = xtrx_val_get(_dev->dev(), XTRX_TRX, XTRX_CH_AB, XTRX_REF_REFCLK, &v);
+	//if (res)
+	//	throw std::runtime_error("SoapyLoopback::getMasterClockRate() unable to get master clock!");
+
+	//return v;
+}
+
+SoapySDR::RangeList SoapyLoopback::getMasterClockRates(void) const
+{
+	SoapySDR::RangeList clks;
+	clks.push_back(SoapySDR::Range(0, 0)); // means autodetect
+	clks.push_back(SoapySDR::Range(10e6, 52e6));
+	return clks;
+}
+
+std::vector<std::string> SoapyLoopback::listClockSources(void) const
+{
+	return { "internal", "extrernal", "ext+pps" };
+}
+
+void SoapyLoopback::setClockSource(const std::string &source)
+{
+    _ref_source = source;
+}
+
+std::string SoapyLoopback::getClockSource(void) const
+{
+    return _ref_source;
+}
+
+
+/*******************************************************************
+ * Sensor API
+ ******************************************************************/
+
+std::vector<std::string> SoapyLoopback::listSensors(void) const
+{
+	std::vector<std::string> sensors;
+	sensors.push_back("clock_locked");
+	sensors.push_back("lms7_temp");
+	sensors.push_back("board_temp");
+	return sensors;
+}
+
+SoapySDR::ArgInfo SoapyLoopback::getSensorInfo(const std::string &name) const
+{
+	SoapySDR::ArgInfo info;
+	if (name == "clock_locked")
+	{
+		info.key = "clock_locked";
+		info.name = "Clock Locked";
+		info.type = SoapySDR::ArgInfo::BOOL;
+		info.value = "false";
+		info.description = "CGEN clock is locked, good VCO selection.";
+	}
+	else if (name == "lms7_temp")
+	{
+		info.key = "lms7_temp";
+		info.name = "LMS7 Temperature";
+		info.type = SoapySDR::ArgInfo::FLOAT;
+		info.value = "0.0";
+		info.units = "C";
+		info.description = "The temperature of the LMS7002M in degrees C.";
+	}
+	else if (name == "board_temp")
+	{
+		info.key = "board_temp";
+		info.name = "XTRX board temerature";
+		info.type = SoapySDR::ArgInfo::FLOAT;
+		info.value = "0.0";
+		info.units = "C";
+		info.description = "The temperature of the XTRX board in degrees C.";
+	}
+	return info;
+}
+
+std::string SoapyLoopback::readSensor(const std::string &name) const
+{
+	if (name == "clock_locked")
+	{
+		return "true";
+	}
+	else if (name == "lms7_temp")
+	{
+		return "1.0";
+	}
+	else if (name == "board_temp")
+	{
+		return "1.0";
+	}
+
+	throw std::runtime_error("SoapyLoopback::readSensor("+name+") - unknown sensor name");
+}
+
+std::vector<std::string> SoapyLoopback::listSensors(const int /*direction*/, const size_t /*channel*/) const
+{
+	std::vector<std::string> sensors;
+	sensors.push_back("lo_locked");
+	return sensors;
+}
+
+SoapySDR::ArgInfo SoapyLoopback::getSensorInfo(const int /*direction*/, const size_t /*channel*/, const std::string &name) const
+{
+	SoapySDR::ArgInfo info;
+	if (name == "lo_locked")
+	{
+		info.key = "lo_locked";
+		info.name = "LO Locked";
+		info.type = SoapySDR::ArgInfo::BOOL;
+		info.value = "false";
+		info.description = "LO synthesizer is locked, good VCO selection.";
+	}
+	return info;
+}
+
+std::string SoapyLoopback::readSensor(const int /*direction*/, const size_t /*channel*/, const std::string &name) const
+{
+
+	if (name == "lo_locked")
+	{
+		return "true";
+	}
+
+	throw std::runtime_error("SoapyLoopback::readSensor("+name+") - unknown sensor name");
+}
