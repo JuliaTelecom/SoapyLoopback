@@ -252,9 +252,8 @@ SoapySDR::Range SoapyLoopback::getGainRange(const int direction, const size_t ch
             return SoapySDR::Range(0, 2);
         }
         if (name == "IF5" || name == "IF6") {
-     return SoapySDR::Range(3, 15);
+            return SoapySDR::Range(3, 15);
         }
-
         return SoapySDR::Range(gainMin, gainMax);
     } else {
         return SoapySDR::Range(gainMin, gainMax);
@@ -272,30 +271,16 @@ void SoapyLoopback::setFrequency(
         const double frequency,
         const SoapySDR::Kwargs &args)
 {
-    //if (name == "RF")
-    //{
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting center freq: %d", (uint32_t)frequency);
-    //    int r = rtlsdr_set_center_freq(dev, (uint32_t)frequency);
-    //    if (r != 0)
-    //    {
-    //        throw std::runtime_error("setFrequency failed");
-    //    }
-    //    centerFrequency = rtlsdr_get_center_freq(dev);
-    //}
-//
-    //if (name == "CORR")
-    //{
-    //    int r = rtlsdr_set_freq_correction(dev, (int)frequency);
-    //    if (r == -2)
-    //    {
-    //        return; // CORR didn't actually change, we are done
-    //    }
-    //    if (r != 0)
-    //    {
-    //        throw std::runtime_error("setFrequencyCorrection failed");
-    //    }
-    //    ppm = rtlsdr_get_freq_correction(dev);
-    //}
+    if (name == "RF")
+    {
+        centerFrequency = frequency;
+    } else if (name == "CORR")
+    {
+        ppm = frequency;
+    } else {
+        SoapySDR_logf(SOAPY_SDR_ERROR, "RTL-SDR invalid name '%s'", name.c_str());
+    }
+
 }
 
 double SoapyLoopback::getFrequency(const int direction, const size_t channel, const std::string &name) const
@@ -303,13 +288,10 @@ double SoapyLoopback::getFrequency(const int direction, const size_t channel, co
     if (name == "RF")
     {
         return (double) centerFrequency;
-    }
-
-    if (name == "CORR")
+    } else if (name == "CORR")
     {
         return (double) ppm;
     }
-
     return 0;
 }
 
@@ -353,21 +335,11 @@ SoapySDR::ArgInfoList SoapyLoopback::getFrequencyArgsInfo(const int direction, c
 
 void SoapyLoopback::setSampleRate(const int direction, const size_t channel, const double rate)
 {
-    //long long ns = SoapySDR::ticksToTimeNs(ticks, sampleRate);
-    //sampleRate = rate;
-    //resetBuffer = true;
-    //SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting sample rate: %d", sampleRate);
-    //int r = rtlsdr_set_sample_rate(dev, sampleRate);
-    //if (r == -EINVAL)
-    //{
-    //    throw std::runtime_error("setSampleRate failed: RTL-SDR does not support this sample rate");
-    //}
-    //if (r != 0)
-    //{
-    //    throw std::runtime_error("setSampleRate failed");
-    //}
-    //sampleRate = rtlsdr_get_sample_rate(dev);
-    //ticks = SoapySDR::timeNsToTicks(ns, sampleRate);
+    long long ns = SoapySDR::ticksToTimeNs(ticks, sampleRate);
+    sampleRate = rate;
+    resetBuffer = true;
+    SoapySDR_logf(SOAPY_SDR_DEBUG, "Setting sample rate: %d", sampleRate);
+    ticks = SoapySDR::timeNsToTicks(ns, sampleRate);
 }
 
 double SoapyLoopback::getSampleRate(const int direction, const size_t channel) const
@@ -384,10 +356,6 @@ std::vector<double> SoapyLoopback::listSampleRates(const int direction, const si
     results.push_back(1536000);
     results.push_back(1792000);
     results.push_back(1920000);
-    results.push_back(2048000);
-    results.push_back(2160000);
-    results.push_back(2560000);
-    results.push_back(2880000);
     results.push_back(3200000);
 
     return results;
@@ -525,36 +493,36 @@ SoapySDR::ArgInfoList SoapyLoopback::getSettingInfo(void) const
 
 void SoapyLoopback::writeSetting(const std::string &key, const std::string &value)
 {
-    //if (key == "direct_samp")
-    //{
-    //    try
-    //    {
-    //        directSamplingMode = std::stoi(value);
-    //    }
-    //    catch (const std::invalid_argument &) {
-    //        SoapySDR_logf(SOAPY_SDR_ERROR, "RTL-SDR invalid direct sampling mode '%s', [0:Off, 1:I-ADC, 2:Q-ADC]", value.c_str());
-    //        directSamplingMode = 0;
-    //    }
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR direct sampling mode: %d", directSamplingMode);
-    //    rtlsdr_set_direct_sampling(dev, directSamplingMode);
-    //}
-    //else if (key == "iq_swap")
-    //{
-    //    iqSwap = ((value=="true") ? true : false);
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR I/Q swap: %s", iqSwap ? "true" : "false");
-    //}
-    //else if (key == "offset_tune")
-    //{
-    //    offsetMode = (value == "true") ? true : false;
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR offset_tune mode: %s", offsetMode ? "true" : "false");
-    //    rtlsdr_set_offset_tuning(dev, offsetMode ? 1 : 0);
-    //}
-    //else if (key == "digital_agc")
-    //{
-    //    digitalAGC = (value == "true") ? true : false;
-    //    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR digital agc mode: %s", digitalAGC ? "true" : "false");
-    //    rtlsdr_set_agc_mode(dev, digitalAGC ? 1 : 0);
-    //}
+    if (key == "direct_samp")
+    {
+        try
+        {
+            directSamplingMode = std::stoi(value);
+        }
+        catch (const std::invalid_argument &) {
+            SoapySDR_logf(SOAPY_SDR_ERROR, "RTL-SDR invalid direct sampling mode '%s', [0:Off, 1:I-ADC, 2:Q-ADC]", value.c_str());
+            directSamplingMode = 0;
+        }
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR direct sampling mode: %d", directSamplingMode);
+        //rtlsdr_set_direct_sampling(dev, directSamplingMode);
+    }
+    else if (key == "iq_swap")
+    {
+        iqSwap = ((value=="true") ? true : false);
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR I/Q swap: %s", iqSwap ? "true" : "false");
+    }
+    else if (key == "offset_tune")
+    {
+        offsetMode = (value == "true") ? true : false;
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR offset_tune mode: %s", offsetMode ? "true" : "false");
+        //rtlsdr_set_offset_tuning(dev, offsetMode ? 1 : 0);
+    }
+    else if (key == "digital_agc")
+    {
+        digitalAGC = (value == "true") ? true : false;
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR digital agc mode: %s", digitalAGC ? "true" : "false");
+        //rtlsdr_set_agc_mode(dev, digitalAGC ? 1 : 0);
+    }
 }
 
 std::string SoapyLoopback::readSetting(const std::string &key) const
