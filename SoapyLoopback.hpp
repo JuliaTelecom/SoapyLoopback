@@ -204,6 +204,8 @@ public:
 
     std::string getTimeSource(void) const;
 
+    void setTimeSource(const std::string &what = "");
+
     bool hasHardwareTime(const std::string &what = "") const;
 
     long long getHardwareTime(const std::string &what = "") const;
@@ -260,6 +262,8 @@ private:
 
     // clock API
     std::string _ref_source;
+
+    std::string time_source;
 
     //int tunerType;
     uint32_t sampleRate, centerFrequency, bandwidth;

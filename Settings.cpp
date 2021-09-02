@@ -31,6 +31,8 @@ SoapyLoopback::SoapyLoopback(const SoapySDR::Kwargs &args):
     deviceId(-1),
     //dev(nullptr),
     //tunerType(RTLSDR_TUNER_R820T),
+    _ref_source("internal"),
+    time_source("sw_ticks"),
     sampleRate(2048000),
     centerFrequency(100000000),
     bandwidth(0),
@@ -409,13 +411,19 @@ std::vector<std::string> SoapyLoopback::listTimeSources(void) const
     std::vector<std::string> results;
 
     results.push_back("sw_ticks");
+    results.push_back("hw_ticks");
 
     return results;
 }
 
 std::string SoapyLoopback::getTimeSource(void) const
 {
-    return "sw_ticks";
+    return time_source;
+}
+
+void SoapyLoopback::setTimeSource(const std::string &what)
+{
+    time_source = what;
 }
 
 bool SoapyLoopback::hasHardwareTime(const std::string &what) const
