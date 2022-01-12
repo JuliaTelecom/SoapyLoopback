@@ -584,7 +584,7 @@ SoapySDR::RangeList SoapyLoopback::getMasterClockRates(void) const
 
 std::vector<std::string> SoapyLoopback::listClockSources(void) const
 {
-	return { "internal", "extrernal", "ext+pps" };
+	return { "internal", "external", "ext+pps" };
 }
 
 void SoapyLoopback::setClockSource(const std::string &source)
