@@ -42,8 +42,9 @@ SOAPY_SDR_MODULE_UTIL(
     TARGET soapyloopback
     SOURCES
         SoapyLoopback.hpp
-        Registration.cpp
-        Settings.cpp
+        SoapyLoopback.cpp
+        LoopbackRingBuffer.hpp
+        StreamBufferAdapter.hpp
         Streaming.cpp
     LIBRARIES
         ${ATOMIC_LIBS}

@@ -32,33 +32,32 @@
 #include <cstring> // memcpy
 
 
-std::vector<std::string> SoapyLoopback::getStreamFormats(const int direction, const size_t channel) const {
+std::vector<std::string> SoapyLoopback::getStreamFormats(const int /*direction*/, const size_t /*channel*/) const {
     std::vector<std::string> formats;
 
-    formats.push_back(SOAPY_SDR_CS8);
-    formats.push_back(SOAPY_SDR_CS12);
-    formats.push_back(SOAPY_SDR_CS16);
+    //formats.push_back(SOAPY_SDR_CS8);
+    //formats.push_back(SOAPY_SDR_CS12);
+    //formats.push_back(SOAPY_SDR_CS16);
     formats.push_back(SOAPY_SDR_CF32);
 
     return formats;
 }
 
-std::string SoapyLoopback::getNativeStreamFormat(const int direction, const size_t channel, double &fullScale) const {
-
-     return SOAPY_SDR_CS12;
+std::string SoapyLoopback::getNativeStreamFormat(const int /*direction*/, const size_t /*channel*/, double &fullScale) const {
+    fullScale = 1.0;
+    return SOAPY_SDR_CF32;
 }
 
-SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int direction, const size_t channel) const {
+SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int /*direction*/, const size_t /*channel*/) const {
     SoapySDR::ArgInfoList streamArgs;
 
     SoapySDR::ArgInfo bufflenArg;
     bufflenArg.key = "bufflen";
-    bufflenArg.value = std::to_string(DEFAULT_BUFFER_LENGTH);
+    bufflenArg.value = std::to_string(DEFAULT_BUFFER_LENGTH_IN_BYTES(float));
     bufflenArg.name = "Buffer Size";
     bufflenArg.description = "Number of bytes per buffer, multiples of 512 only.";
     bufflenArg.units = "bytes";
     bufflenArg.type = SoapySDR::ArgInfo::INT;
-
     streamArgs.push_back(bufflenArg);
 
     SoapySDR::ArgInfo buffersArg;
@@ -68,66 +67,9 @@ SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int direction, cons
     buffersArg.description = "Number of buffers in the ring.";
     buffersArg.units = "buffers";
     buffersArg.type = SoapySDR::ArgInfo::INT;
-
     streamArgs.push_back(buffersArg);
 
-    SoapySDR::ArgInfo asyncbuffsArg;
-    asyncbuffsArg.key = "asyncBuffs";
-    asyncbuffsArg.value = "0";
-    asyncbuffsArg.name = "Async buffers";
-    asyncbuffsArg.description = "Number of async usb buffers (advanced).";
-    asyncbuffsArg.units = "buffers";
-    asyncbuffsArg.type = SoapySDR::ArgInfo::INT;
-
-    streamArgs.push_back(asyncbuffsArg);
-
     return streamArgs;
-}
-
-/*******************************************************************
- * Async thread work
- ******************************************************************/
-
-void SoapyLoopback::rx_async_operation(void)
-{
-    printf("rx_async_operation\n");
-    //rtlsdr_read_async(dev, &_rx_callback, this, asyncBuffs, bufferLength);
-    printf("rx_async_operation done!\n");
-}
-
-void SoapyLoopback::rx_callback(unsigned char *buf, uint32_t len)
-{
-    //printf("_rx_callback %d _buf_head=%d, numBuffers=%d\n", len, _buf_head, _buf_tail);
-
-    // atomically add len to ticks but return the previous value
-    unsigned long long tick = ticks.fetch_add(len);
-
-    //overflow condition: the caller is not reading fast enough
-    if (_buf_count == numBuffers)
-    {
-        _overflowEvent = true;
-        return;
-    }
-
-    //copy into the buffer queue
-    auto &buff = _buffs[_buf_tail];
-    buff.tick = tick;
-    buff.data.resize(len);
-    std::memcpy(buff.data.data(), buf, len);
-
-    //increment the tail pointer
-    _buf_tail = (_buf_tail + 1) % numBuffers;
-
-    //increment buffers available under lock
-    //to avoid race in acquireReadBuffer wait
-    {
-    std::lock_guard<std::mutex> lock(_buf_mutex);
-    _buf_count++;
-
-    }
-
-    //notify readStream()
-    _buf_cond.notify_one();
 }
 
 /*******************************************************************
@@ -140,263 +82,231 @@ SoapySDR::Stream *SoapyLoopback::setupStream(
         const std::vector<size_t> &channels,
         const SoapySDR::Kwargs &args)
 {
-
     //check the channel configuration
-    if (channels.size() > 1 or (channels.size() > 0 and channels.at(0) != 0))
-    {
-        throw std::runtime_error("setupStream invalid channel selection");
+    if (channels.size() > 1 or (channels.size() > 0 and channels.at(0) != 0)) {
+        throw std::runtime_error("setupStream: invalid channel selection");
     }
 
-    //check the format
-    if (format == SOAPY_SDR_CF32)
-    {
+    // TODO: actually support more formats, store into rxFormat, etc....
+    if (format == SOAPY_SDR_CF32) {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CF32.");
         //rxFormat = RTL_RX_FORMAT_FLOAT32;
     }
-    else if (format == SOAPY_SDR_CS12)
-    {
+    /*
+    } else if (format == SOAPY_SDR_CS12) {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CS12.");
         //rxFormat = RTL_RX_FORMAT_INT16;
-    }
-    else if (format == SOAPY_SDR_CS16)
-    {
+    } else if (format == SOAPY_SDR_CS16) {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CS16.");
         //rxFormat = RTL_RX_FORMAT_INT16;
-    }
-    else if (format == SOAPY_SDR_CS8) {
+    } else if (format == SOAPY_SDR_CS8) {
         SoapySDR_log(SOAPY_SDR_INFO, "Using format CS8.");
         //rxFormat = RTL_RX_FORMAT_INT8;
-    }
-    else
-    {
+    */
+    else {
         throw std::runtime_error(
-                "setupStream invalid format '" + format
+                "setupStream: invalid format '" + format
                         + "' -- Only CS8, CS16 and CF32 are supported by SoapyLoopback module.");
     }
 
-    bufferLength = DEFAULT_BUFFER_LENGTH;
-    if (args.count("bufflen") != 0)
-    {
-        try
-        {
-            int bufferLength_in = std::stoi(args.at("bufflen"));
-            if (bufferLength_in > 0)
-            {
-                bufferLength = bufferLength_in;
+    size_t bufflen = DEFAULT_BUFFER_LENGTH_IN_SAMPLES;
+    if (args.count("bufflen") != 0) {
+        try {
+            size_t bufflen_in = std::stoi(args.at("bufflen"));
+            if (bufflen_in > 0) {
+                bufflen = bufflen_in;
             }
         }
         catch (const std::invalid_argument &){}
     }
-    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR Using buffer length %d", bufferLength);
+    SoapySDR_logf(SOAPY_SDR_DEBUG, "[SoapyLoopback] Using buffer length %d", bufflen);
 
-    numBuffers = DEFAULT_NUM_BUFFERS;
-    if (args.count("buffers") != 0)
-    {
-        try
-        {
-            int numBuffers_in = std::stoi(args.at("buffers"));
-            if (numBuffers_in > 0)
-            {
-                numBuffers = numBuffers_in;
+    size_t num_buffers = DEFAULT_NUM_BUFFERS;
+    if (args.count("buffers") != 0) {
+        try {
+            int num_buffers_in = std::stoi(args.at("buffers"));
+            if (num_buffers_in > 0) {
+                num_buffers = num_buffers_in;
             }
         }
         catch (const std::invalid_argument &){}
     }
-    SoapySDR_logf(SOAPY_SDR_DEBUG, "RTL-SDR Using %d buffers", numBuffers);
+    SoapySDR_logf(SOAPY_SDR_DEBUG, "SoapyLoopback Using %zu buffers", num_buffers);
 
-    asyncBuffs = 0;
-    if (args.count("asyncBuffs") != 0)
-    {
-        try
-        {
-            int asyncBuffs_in = std::stoi(args.at("asyncBuffs"));
-            if (asyncBuffs_in > 0)
-            {
-                asyncBuffs = asyncBuffs_in;
-            }
+    // If we already have a ringBuff allocated, ensure we match it, otherwise create one:
+    if (this->ringBuff == NULL) {
+        // Allocate ring buffer with these values
+        this->ringBuff = new LoopbackRingBuffer(num_buffers, bufflen, channels.size(), SoapySDR::formatToSize(this->sampleFormat));
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "RingBuffer constructed");
+    } else {
+        if (this->ringBuff->numBuffers() != num_buffers) {
+            throw std::runtime_error(
+                "Cannot open stream that disagrees in buffer count (" +
+                std::to_string(num_buffers) +
+                " != " +
+                std::to_string(this->ringBuff->numBuffers()) +
+                ") with previously-setup stream"
+            );
         }
-        catch (const std::invalid_argument &){}
+        if (this->ringBuff->bufferLen() != bufflen) {
+            throw std::runtime_error(
+                "Cannot open stream that disagrees in buffer length (" +
+                std::to_string(bufflen) +
+                " != " +
+                std::to_string(this->ringBuff->bufferLen()) +
+                ") with previously-setup stream"
+            );
+        }
+        if (this->ringBuff->numChannels() != channels.size()) {
+            throw std::runtime_error(
+                "Cannot open stream that disagrees in buffer length (" +
+                std::to_string(channels.size()) +
+                " != " +
+                std::to_string(this->ringBuff->numChannels()) +
+                ") with previously-setup stream"
+            );
+        }
+        auto elem_size = SoapySDR::formatToSize(this->sampleFormat);
+        if (this->ringBuff->elemSize() != elem_size) {
+            throw std::runtime_error(
+                "Cannot open stream that disagrees in element size (" +
+                std::to_string(elem_size) +
+                " != " +
+                std::to_string(this->ringBuff->elemSize()) +
+                ") with previously-setup stream"
+            );
+        }
+        SoapySDR_logf(SOAPY_SDR_DEBUG, "RingBuffer congruency validated");
     }
-    //if (tunerType == RTLSDR_TUNER_E4000) {
-    //    IFGain[0] = 6;
-    //    IFGain[1] = 9;
-    //    IFGain[2] = 3;
-    //    IFGain[3] = 2;
-    //    IFGain[4] = 3;
-    //    IFGain[5] = 3;
-    //} else {
-    //    for (int i = 0; i < 6; i++) {
-    //        IFGain[i] = 0;
-    //    }
-    //}
-    //tunerGain = rtlsdr_get_tuner_gain(dev) / 10.0;
 
-    //clear async fifo counts
-    _buf_tail = 0;
-    _buf_count = 0;
-    _buf_head = 0;
-
-    //allocate buffers
-    _buffs.resize(numBuffers);
-    for (auto &buff : _buffs) buff.data.reserve(bufferLength);
-    for (auto &buff : _buffs) buff.data.resize(bufferLength);
-
-    return (SoapySDR::Stream *) this;
+    // Differentiate rx/tx direction by returning two different stream "pointer values"
+    // We just return `(this) + direction`, so that we have differentiated, non-NULL values.
+    // These pointers should never be dereferenced, so we're okay to use whatever we want here.
+    return (SoapySDR::Stream *) ((uintptr_t)this + (uintptr_t)direction);
 }
 
-void SoapyLoopback::closeStream(SoapySDR::Stream *stream)
-{
+void SoapyLoopback::closeStream(SoapySDR::Stream *stream) {
     this->deactivateStream(stream, 0, 0);
-    _buffs.clear();
+
+    // Only free the ring buffer if we've closed all opened streams
+    if (this->readAdapter == NULL && this->writeAdapter == NULL) {
+        delete this->ringBuff;
+        this->ringBuff = NULL;
+    }
 }
 
-size_t SoapyLoopback::getStreamMTU(SoapySDR::Stream *stream) const
-{
-    return bufferLength / BYTES_PER_SAMPLE;
+size_t SoapyLoopback::getStreamMTU(SoapySDR::Stream * /*stream*/) const {
+    return this->ringBuff->bufferLen();
 }
 
 int SoapyLoopback::activateStream(
-        SoapySDR::Stream *stream,
-        const int flags,
-        const long long timeNs,
-        const size_t numElems)
-{
-    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
-    resetBuffer = true;
-    bufferedElems = 0;
+        SoapySDR::Stream * stream,
+        const int /*flags*/,
+        const long long /*timeNs*/,
+        const size_t numElems) {
+    
+    // Ensure that `numElems` matches what was provided above as `bufflen`
+    if (numElems != this->ringBuff->bufferLen()) {
+        throw std::runtime_error(
+            "activateStream mismatched numElems (" + std::to_string(numElems) +
+            ") with ring buffer bufflen (" + std::to_string(this->ringBuff->bufferLen()) + ")"
+        );
+    }
 
-    //start the async thread
-    if (not _rx_async_thread.joinable())
-    {
-        _rx_async_thread = std::thread(&SoapyLoopback::rx_async_operation, this);
+    // Set up stream buffer adapters, to allow for easy reading and writing of samples.
+    // We track initialization of rx/tx streams by activating either the read or write adapters:
+    if ((uintptr_t)stream == (uintptr_t)this + (uintptr_t)SOAPY_SDR_RX) {
+        auto read_acq = [this](std::vector<uint8_t *> &buffs) { return this->ringBuff->acquireReadBuffer(buffs); };
+        auto read_rel = [this](std::vector<uint8_t *> &buffs) { return this->ringBuff->releaseReadBuffer(buffs); };
+        this->readAdapter = new StreamBufferAdapter(read_acq, read_rel, numElems, SoapySDR::formatToSize(this->sampleFormat));
+    } else if ((uintptr_t)stream == (uintptr_t)this + (uintptr_t)SOAPY_SDR_TX) {
+        auto write_acq = [this](std::vector<uint8_t *> &buffs) { return this->ringBuff->acquireWriteBuffer(buffs); };
+        auto write_rel = [this](std::vector<uint8_t *> &buffs) { return this->ringBuff->releaseWriteBuffer(buffs); };
+        this->writeAdapter = new StreamBufferAdapter((AcquireBufferFunc)write_acq, (ReleaseBufferFunc)write_rel, numElems, SoapySDR::formatToSize(this->sampleFormat));
+    } else {
+        throw std::runtime_error(
+            "activateStream called with invalid stream (" + std::to_string((uintptr_t)stream) + ")"
+        );
+    }
+    return 0;
+}
+
+int SoapyLoopback::deactivateStream(SoapySDR::Stream *stream, const int /*flags*/, const long long /*timeNs*/) {
+    if ((uintptr_t)stream == (uintptr_t)this + (uintptr_t)SOAPY_SDR_RX) {
+        if (this->readAdapter != NULL) {
+            delete this->readAdapter;
+            this->readAdapter = NULL;
+        }
+    } else if ((uintptr_t)stream == (uintptr_t)this + (uintptr_t)SOAPY_SDR_TX) {
+        if (this->writeAdapter != NULL) {
+            delete this->writeAdapter;
+            this->writeAdapter = NULL;
+        }
+    } else {
+        throw std::runtime_error(
+            "deactivateStream called with invalid stream (" + std::to_string((uintptr_t)stream) + ")"
+        );
     }
 
     return 0;
 }
 
-int SoapyLoopback::deactivateStream(SoapySDR::Stream *stream, const int flags, const long long timeNs)
-{
-    if (flags != 0) return SOAPY_SDR_NOT_SUPPORTED;
-    if (_rx_async_thread.joinable())
-    {
-        _rx_async_thread.join();
+int SoapyLoopback::transact(void ** output_buffs, const size_t numElems, int &flags,
+                            const long timeoutUs, bool read) {
+    // Convert from bare array to `std::vector<>`
+    std::vector<uint8_t *> buffs(this->ringBuff->numChannels());
+    for (size_t chan_idx=0; chan_idx<this->ringBuff->numChannels(); ++chan_idx) {
+        buffs[chan_idx] = (uint8_t *)output_buffs[chan_idx];
     }
-    return 0;
+
+    StreamBufferAdapter * adapter = read ? this->readAdapter : this->writeAdapter;
+    size_t num_samples = numElems;
+
+    auto t_start = std::chrono::high_resolution_clock::now();
+    while (true) {
+        // If we successfully transact, return how many samples we were able to transmit
+        if (adapter->transact(buffs, &num_samples, read) == 0) {
+            // When reading, report that we have more fragments if we haven't completely
+            // consumed the buffer.
+            if (read && adapter->getBuffSpace() > 0) {
+                flags |= SOAPY_SDR_MORE_FRAGMENTS;
+            }
+            return num_samples;
+        }
+
+        // If we time out, return `SOAPY_SDR_TIMEOUT`.
+        auto t_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - t_start);
+        if (t_duration.count() >= timeoutUs) {
+            return SOAPY_SDR_TIMEOUT;
+        }
+    }
+    // We should never get here.
+    return SOAPY_SDR_STREAM_ERROR;
 }
 
 int SoapyLoopback::readStream(
-        SoapySDR::Stream *stream,
+        SoapySDR::Stream * /*stream*/,
         void * const *buffs,
         const size_t numElems,
         int &flags,
-        long long &timeNs,
+        long long & /*timeNs*/,
         const long timeoutUs)
 {
-    //drop remainder buffer on reset
-    if (resetBuffer and bufferedElems != 0)
-    {
-        bufferedElems = 0;
-        this->releaseReadBuffer(stream, _currentHandle);
-    }
-
-    //this is the user's buffer for channel 0
-    void *buff0 = buffs[0];
-
-    //are elements left in the buffer? if not, do a new read.
-    if (bufferedElems == 0)
-    {
-        int ret = this->acquireReadBuffer(stream, _currentHandle, (const void **)&_currentBuff, flags, timeNs, timeoutUs);
-        if (ret < 0) return ret;
-        bufferedElems = ret;
-    }
-
-    //otherwise just update return time to the current tick count
-    else
-    {
-        flags |= SOAPY_SDR_HAS_TIME;
-        timeNs = SoapySDR::ticksToTimeNs(bufTicks, sampleRate);
-    }
-
-    size_t returnedElems = std::min(bufferedElems, numElems);
-
-    //bump variables for next call into readStream
-    bufferedElems -= returnedElems;
-    _currentBuff += returnedElems*BYTES_PER_SAMPLE;
-    bufTicks += returnedElems; //for the next call to readStream if there is a remainder
-
-    //return number of elements written to buff0
-    if (bufferedElems != 0) flags |= SOAPY_SDR_MORE_FRAGMENTS;
-    else this->releaseReadBuffer(stream, _currentHandle);
-    return returnedElems;
+    // Drop the `const` qualifiers on `buffs`, as we don't want to have
+    // to duplicate a bunch of code; because of our `read` boolean parameter
+    // we know when we'll write into `buffs` and when we won't, but the
+    // compiler can't quite tell, so just typecast to assuage its doubts.
+    return this->transact( (void**)buffs, numElems, flags, timeoutUs, true);
 }
 
-/*******************************************************************
- * Direct buffer access API
- ******************************************************************/
-
-size_t SoapyLoopback::getNumDirectAccessBuffers(SoapySDR::Stream *stream)
+int SoapyLoopback::writeStream(
+        SoapySDR::Stream * /*stream*/,
+        const void * const *buffs,
+        const size_t numElems,
+        int &flags,
+        const long long /*timeNs*/,
+        const long timeoutUs)
 {
-    return _buffs.size();
-}
-
-int SoapyLoopback::getDirectAccessBufferAddrs(SoapySDR::Stream *stream, const size_t handle, void **buffs)
-{
-    buffs[0] = (void *)_buffs[handle].data.data();
-    return 0;
-}
-
-int SoapyLoopback::acquireReadBuffer(
-    SoapySDR::Stream *stream,
-    size_t &handle,
-    const void **buffs,
-    int &flags,
-    long long &timeNs,
-    const long timeoutUs)
-{
-    //reset is issued by various settings
-    //to drain old data out of the queue
-    if (resetBuffer)
-    {
-        //drain all buffers from the fifo
-        _buf_head = (_buf_head + _buf_count.exchange(0)) % numBuffers;
-        resetBuffer = false;
-        _overflowEvent = false;
-    }
-
-    //handle overflow from the rx callback thread
-    if (_overflowEvent)
-    {
-        //drain the old buffers from the fifo
-        _buf_head = (_buf_head + _buf_count.exchange(0)) % numBuffers;
-        _overflowEvent = false;
-        SoapySDR::log(SOAPY_SDR_SSI, "O");
-        return SOAPY_SDR_OVERFLOW;
-    }
-
-    //wait for a buffer to become available
-    if (_buf_count == 0)
-    {
-        std::unique_lock <std::mutex> lock(_buf_mutex);
-        _buf_cond.wait_for(lock, std::chrono::microseconds(timeoutUs), [this]{return _buf_count != 0;});
-        if (_buf_count == 0) return SOAPY_SDR_TIMEOUT;
-    }
-
-    //extract handle and buffer
-    handle = _buf_head;
-    _buf_head = (_buf_head + 1) % numBuffers;
-    bufTicks = _buffs[handle].tick;
-    timeNs = SoapySDR::ticksToTimeNs(_buffs[handle].tick, sampleRate);
-    buffs[0] = (void *)_buffs[handle].data.data();
-    flags = SOAPY_SDR_HAS_TIME;
-
-    //return number available
-    return _buffs[handle].data.size() / BYTES_PER_SAMPLE;
-}
-
-void SoapyLoopback::releaseReadBuffer(
-    SoapySDR::Stream *stream,
-    const size_t handle)
-{
-    //TODO this wont handle out of order releases
-    _buf_count--;
+    // Same here as above.
+    return this->transact((void**)buffs, numElems, flags, timeoutUs, false);
 }

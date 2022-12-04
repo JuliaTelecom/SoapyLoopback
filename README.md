@@ -6,6 +6,13 @@ language bindings to ensure all codepaths are exercised and produce expected res
 
 Derived from the [SoapyRTLSDR](https://github.com/pothosware/SoapyRTLSDR) module.
 
+## TODO
+
+* Implement TimeSource API
+* Implement Frequency Correction API
+* Implement direct access API
+* Support more than just ComplexF32
+
 ## Dependencies
 
 * SoapySDR - https://github.com/pothosware/SoapySDR/wiki
