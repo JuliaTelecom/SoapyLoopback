@@ -90,9 +90,9 @@ SoapySDR::ArgInfoList SoapyLoopback::getStreamArgsInfo(const int direction, cons
 
 void SoapyLoopback::rx_async_operation(void)
 {
-    printf("rx_async_operation\n");
+    //printf("rx_async_operation\n");
     //rtlsdr_read_async(dev, &_rx_callback, this, asyncBuffs, bufferLength);
-    printf("rx_async_operation done!\n");
+    //printf("rx_async_operation done!\n");
 }
 
 void SoapyLoopback::rx_callback(unsigned char *buf, uint32_t len)
